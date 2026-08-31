@@ -48,7 +48,7 @@ kolla-ansible deploy -i /etc/kolla/all-in-one
 | --- | --- |
 | `weeks/weekNN/` | 회차별 예습 자료 · 세션 자료 · 세션 기록 |
 | `docs/rules.md` | 1회차에 합의한 운영 규칙 |
-| `docs/kolla-deploy.md` | Kolla-Ansible 배포 절차 (가비아 VM · OVS) — `setup.sh`/`init.sh`가 하는 일의 설명서 |
+| `docs/kolla-deploy.md` | Kolla-Ansible 배포 절차 (가비아 VM · OVS) — `setup.sh`가 하는 일의 설명서 |
 | `docs/leader-study-notes.md` | 스터디장 공부 노트 공유본 (참고용) |
 | `scripts/` | `setup.sh` (4회차) · `init.sh` (6회차) — 리더가 검증 후 공개 |
 | `members/<github-id>/` | 참가자 주차별 정리 (PR로 제출) |
