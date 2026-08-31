@@ -1,0 +1,16 @@
+# 절대 커밋 금지 — 공개 레포
+*.pem
+*.key
+passwords.yml
+admin-openrc.sh
+clouds.yaml
+globals.yml
+/etc/
+*.env
+.env*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
