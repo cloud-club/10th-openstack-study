@@ -58,5 +58,5 @@ kolla-ansible deploy -i /etc/kolla/all-in-one
 
 - **예습**: 주초에 `weeks/weekNN/prestudy-*.md`와 "알고 오기" 질문을 톡방에 공지. Part A(필수) + Part B(심화)
 - **인증**: 매주 완료 기준 스크린샷을 톡방에, 다음 세션 전까지
-- **주차별 정리**: `members/<본인 github id>/weekNN.md`로 PR → [PR 템플릿](.github/PULL_REQUEST_TEMPLATE.md)
-- **트러블슈팅**: 막히면 Issue 작성 → [트러블슈팅 템플릿](.github/ISSUE_TEMPLATE/troubleshooting.md).
+- **주차별 정리**: `members/<본인 github id>/weekNN.md`로 PR → [PR 템플릿]([.github/PULL_REQUEST_TEMPLATE.md](https://github.com/cloud-club/template/tree/main/PR))
+- **트러블슈팅**: 막히면 Issue 작성 → [트러블슈팅 템플릿]([.github/ISSUE_TEMPLATE/troubleshooting.md](https://github.com/cloud-club/template/tree/main/ISSUE)).
