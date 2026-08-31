@@ -8,7 +8,7 @@
 - 기간: 2026.08.31 ~ 10.19 (매주 월요일 22:00, 온라인 60분) · 시즌1 발표 10/24(토)
 - 인원: 리더 포함 10명 · 1인 1 VM (가비아 클라우드, Ubuntu 24.04)
 - 스택: Kolla-Ansible 22.0.0 · OpenStack 2026.1 Gazpacho · all-in-one · ML2/OVS
-- 최종 목표: 내가 배포한 OpenStack의 인스턴스에 `ssh cirros@<Floating IP>` 🏁
+- 최종 목표: 내가 배포한 OpenStack의 인스턴스에 `ssh cirros@<Floating IP>`
 
 ## 8주 뒤 우리가 만드는 것
 
