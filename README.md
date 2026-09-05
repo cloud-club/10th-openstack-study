@@ -48,6 +48,6 @@
 
 - **예습**: 주초에 `weeks/weekNN/prestudy-*.md`와 "알고 오기" 질문을 톡방에 공지. Part A(필수) + Part B(심화)
 - **인증**: 매주 완료 기준 스크린샷을 톡방에, 다음 세션 전까지
-- **주차별 정리**: `members/<본인 github id>/weekNN.md`로 PR → [PR 템플릿]([.github/PULL_REQUEST_TEMPLATE.md](https://github.com/cloud-club/template/tree/main/PR))
-- **트러블슈팅**: 막혔던 지점은 `issue/weekNN-증상.md`로 정리 → [ISSUE 템플릿]([issue/TEMPLATE.md](https://github.com/cloud-club/template/tree/main/ISSUE))
+- **주차별 정리**: `members/<본인 github id>/weekNN.md`로 PR → [PR 템플릿](https://github.com/cloud-club/template/tree/main/PR)
+- **트러블슈팅**: 막혔던 지점은 `issue/weekNN-증상.md`로 정리 → [ISSUE 템플릿](https://github.com/cloud-club/template/tree/main/ISSUE)
 
