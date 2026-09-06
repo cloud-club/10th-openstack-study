@@ -103,7 +103,7 @@ OpenStack은 하나의 거대한 실행 파일이 아니라 역할이 분리된 
 | Barbican  | Key·Secret Management          |
 
 
-OpenStack 전체 컴포넌트 아키텍처
+![OpenStack 전체 컴포넌트 아키텍처](images/openstack-arch-kilo-logical-v1.png)
 
 *그림 1. OpenStack 주요 서비스와 DB·메시지 큐·외부 자원의 연결 관계. Kilo 시기의 논리 구성도이므로 일부 서비스와 프로세스 이름은 2026.1과 다르지만, 각 서비스가 API·DB·메시지 큐를 통해 협력하는 전체 구조를 보는 데 유용하다.*
 
@@ -201,6 +201,8 @@ openstack configuration show
 
 서비스가 서로 통신하는 방식은 상황에 따라 다르다.
 
+**RPC(Remote Procedure Call)**는 다른 process나 server에 있는 함수를 내 program의 함수처럼 호출하는 방식이다. 예를 들어 Nova가 “이 host에 VM을 만들어 줘”라는 RPC를 보내면, 호출할 method와 인자가 message로 바뀌어 RabbitMQ를 거쳐 해당 `nova-compute`에 전달된다.
+
 **서비스 외부 API**는 주로 HTTP 기반 REST를 사용한다. 예를 들어 CLI의 `openstack server list`는 Nova의 server 목록 API 호출로 변환된다.
 
 ```http
@@ -208,7 +210,9 @@ GET /v2.1/servers HTTP/1.1
 X-Auth-Token: <TOKEN>
 ```
 
-**한 서비스 내부의 분리된 프로세스**는 RabbitMQ를 통한 RPC를 많이 사용한다. Nova에서는 API·Conductor·Scheduler·Compute가 메시지로 작업을 전달한다.
+**한 서비스 내부의 분리된 프로세스**는 RabbitMQ를 통한 RPC를 많이 사용한다. Nova에서는 API·Conductor·Scheduler·Compute가 메시지로 작업을 전달한다. 호출하는 쪽은 상대 process의 위치나 세부 통신 방식보다 “무슨 작업을 실행할지”에 집중할 수 있다.
+
+**AMQP(Advanced Message Queuing Protocol)**는 producer와 consumer가 RabbitMQ를 통해 message를 발행·routing·전달하는 방법을 정한 표준 message protocol이다.
 
 RabbitMQ의 기본 구성은 다음처럼 이해할 수 있다.
 
@@ -241,7 +245,24 @@ MariaDB와 RabbitMQ는 모두 중요하지만 같은 종류의 저장소가 아�
 
 ### 3-4. Fernet의 stateless는 무엇이 없는 것인가 (추가)
 
+**Fernet**은 Keystone이 사용하는 token 형식으로, 사용자에게는 `gAAAAA...`처럼 의미를 바로 알 수 없는 문자열로 보인다. Keystone은 대칭 key로 token의 제한된 인증 문맥을 보호하고 위·변조 여부와 만료 시각을 검증한다.
+
 Fernet token이 stateless라는 말은 발급한 token 레코드를 Keystone DB에 하나씩 영속 저장하지 않는다는 뜻이다. token의 제한된 정보는 암호화되고 무결성이 보호된 형태로 표현되며, 여러 Keystone 노드는 같은 Fernet key repository를 공유해야 한다.
+
+주요 특징은 다음과 같다.
+
+- **DB에 token별 record를 저장하지 않음**: token이 많이 발급돼도 token table이 계속 커지지 않는다.
+- **만료와 위·변조를 검사함**: 문자열 한 글자라도 임의로 바꾸면 유효한 token으로 인정되지 않는다.
+- **key 공유와 rotation이 필요함**: 여러 Keystone 노드가 같은 token을 검증하려면 Fernet key를 동기화해야 한다.
+
+간단한 예시로 보면 다음과 같다.
+
+```text
+1. 사용자가 Keystone에 login -> Fernet token 발급
+2. Keystone는 해당 token을 DB의 개별 record로 INSERT하지 않음
+3. 사용자가 token으로 Nova API 요청
+4. Keystone가 Fernet key로 token의 무결성·만료·scope를 검증
+```
 
 그러나 Nova가 Fernet key를 가지고 token을 직접 복호화한다는 뜻은 아니다. Fernet key는 Identity service가 보호해야 한다. 다른 OpenStack API의 `keystonemiddleware.auth_token`은 요청에서 token을 꺼내 Keystone을 통해 검증하고, 검증 결과를 요청 문맥에 넣는다. Memcached가 유효한 검증 결과를 제공하면 반복 검증 비용을 줄일 수 있다.
 
@@ -266,7 +287,7 @@ API 요청 접수 성공 != 백그라운드 작업 완료 != 게스트 서비스
 - `ACTIVE`: Nova의 인스턴스 생성 작업이 성공 상태로 수렴했다.
 - SSH 가능: 게스트 부팅, network, security group, SSH service까지 준비됐다.
 
-`oslo.messaging`에서 `cast`는 전송 계층이 요청을 받아들이는 시점까지만 기다리며 원격 메서드가 실제로 완료됐는지는 검증하지 않는 best-effort 동작이다. MQ가 있다는 사실만으로 업무의 최종 성공을 보장한다고 생각하면 안 된다. 자세한 동작은 `[oslo.messaging` RPC Client 문서]([https://docs.openstack.org/oslo.messaging/latest/reference/rpcclient.html)에서](https://docs.openstack.org/oslo.messaging/latest/reference/rpcclient.html)에서) 확인할 수 있다.
+`oslo.messaging`에서 `cast`는 전송 계층이 요청을 받아들이는 시점까지만 기다리며 원격 메서드가 실제로 완료됐는지는 검증하지 않는 best-effort 동작이다. MQ가 있다는 사실만으로 업무의 최종 성공을 보장한다고 생각하면 안 된다. 자세한 동작은 [`oslo.messaging` RPC Client 문서](https://docs.openstack.org/oslo.messaging/latest/reference/rpcclient.html)에서 확인할 수 있다.
 
 OpenStack Compute API도 `2xx`가 작업의 최종 성공을 뜻하지 않을 수 있다고 설명한다. [Compute API Faults](https://docs.openstack.org/api-guide/compute/faults.html)에서 비동기 server action과 상태 확인 방법을 볼 수 있다.
 
@@ -360,7 +381,11 @@ sudo dmesg -T | grep -i -E 'out of memory|killed process'
 
 ### 4-4. 모든 Nova에는 Cells v2가 있다 (추가)
 
-Nova의 네 프로세스 다음에는 **Cells v2**라는 확장·장애 격리 구조가 있다. 현재 Nova 배포는 all-in-one을 포함해 최소 하나의 실제 cell을 가진다.
+**Cell**은 여러 compute host를 하나의 DB와 message queue 안에 묶어 관리하는 Nova의 하위 구역이다. Nova 전체에 공통인 API와 scheduler는 cell 위에 있고, 실제 VM을 만드는 compute와 상세 instance 상태는 각 cell 안에 나뉘다. 쉽게 말하면 공통 접수 창구는 하나이지만, 실제 작업장과 장부를 여러 구역으로 나눈 구조다.
+
+예를 들어 compute node가 200대인 환경에서 1~100번 node를 Cell 1, 101~200번 node를 Cell 2로 나눌 수 있다. 사용자는 cell을 직접 지정하지 않고 평소처럼 Nova API에 VM을 요청하며, scheduler가 host를 선택하면 그 host가 속한 cell에서 작업이 진행된다.
+
+Nova의 네 process 다음에는 **Cells v2**라는 확장·장애 격리 구조가 있다. 현재 Nova 배포는 all-in-one을 포함해 최소 하나의 실제 cell을 가진다.
 
 ```text
 nova-api ---- API DB
@@ -382,6 +407,16 @@ cell0: compute가 없으며 scheduling에 실패한 instance를 기록
 | Cell MQ | cell 내부 conductor와 compute 사이 RPC |
 | cell0   | 실제 compute에 도달하지 못한 instance 기록   |
 
+인스턴스 생성 흐름에 대입하면 다음과 같다.
+
+```text
+1. nova-api가 API DB에 전역 정보를 기록
+2. nova-scheduler가 Placement를 보고 compute host를 선택
+3. 선택된 host가 속한 cell의 MQ로 build 작업 전달
+4. cell의 conductor·compute가 VM을 만들고 Cell DB에 상세 상태 기록
+```
+
+`cell0`는 일반 cell처럼 compute host를 가지지 않는 특수한 공간이다. Scheduler가 조건에 맞는 host를 찾지 못해 실제 cell에 배치하지 못한 instance를 기록한다.
 
 큰 환경에서는 compute node를 여러 cell로 나누어 DB와 MQ 부하 및 장애 범위를 줄일 수 있다. 대신 전체 목록 조회, cross-cell 이동, upgrade와 장애 처리의 복잡성이 증가한다.
 
@@ -468,7 +503,7 @@ Horizon이나 CLI에서 인스턴스를 생성하면 다음 서비스들이 협�
 
 이 흐름은 이해를 위한 대표 경로다. Image boot인지 volume boot인지, Neutron port를 미리 만들었는지, backend가 local disk인지 Ceph인지에 따라 세부 호출과 순서는 달라질 수 있다.
 
-OpenStack 인스턴스 생성 과정
+![OpenStack 인스턴스 생성 과정](images/instance-launch-process.png)
 
 *그림 2. 인스턴스 생성 요청이 Keystone 인증에서 시작해 Nova, Placement, Glance, Neutron, Cinder를 거쳐 libvirt와 QEMU/KVM으로 전달되는 흐름.*
 
@@ -669,7 +704,7 @@ OVN은 native L2 switching, distributed L3 routing, native DHCP를 제공하며 
 | 상태 접근      | 명령 실행 중심                    | desired state와 controller 수렴 중심         |
 
 
-OpenStack OVN 아키텍처
+![OpenStack OVN 아키텍처](images/329_OpenStack_OVN_Architecture_0923_1.png)
 
 *그림 3. Neutron과 OVN Northbound·Southbound DB, `ovn-northd`, 각 컴퓨트 노드의 `ovn-controller`와 OVS가 연결되는 구조.*
 
@@ -791,7 +826,7 @@ Neutron이 논리 network를 정의하고 OVS flow를 구성하는 모습은 SDN
 | 장점       | 단순성, 성능, 물리망 직접 연결           | tenant 자율성, 주소 중복 허용, 확장성 |
 
 
-OVS를 사용한 VLAN Provider Network 패킷 경로
+![OVS를 사용한 VLAN Provider Network 패킷 경로](images/vlan-provider.jpg)
 
 *그림 4. VM의 `eth0`에서 시작한 패킷이 tap interface, Linux bridge, `br-int`, `br-ex`를 거쳐 물리 NIC로 전달되는 OVS 기반 VLAN Provider Network 경로.*
 
@@ -1065,7 +1100,7 @@ VXLAN으로 캡슐화된 패킷을 물리 라우터는 어떤 패킷으로 인�
 - [Keystone 2026.1 — Token과 Fernet](https://docs.openstack.org/keystone/2026.1/admin/tokens.html)
 - [Keystone — Service Catalog](https://docs.openstack.org/keystone/latest/contributor/service-catalog.html)
 - [Identity API v3](https://docs.openstack.org/api-ref/identity/v3/)
-- `[oslo.messaging` — RPC `call`과 `cast](https://docs.openstack.org/oslo.messaging/latest/reference/rpcclient.html)`
+- [`oslo.messaging` — RPC `call`과 `cast`](https://docs.openstack.org/oslo.messaging/latest/reference/rpcclient.html)
 
 ### Nova와 Placement
 
