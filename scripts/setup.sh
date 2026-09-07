@@ -7,11 +7,13 @@
 #   - 개발계(.180) ML2/OVS 구성 2026-07-07
 #   - 공부 노트 Ch4 (가비아 VM · ML2/OVS 이식본)
 # 가비아 VM에 맞게 바꾼 것: 브리지(brbond0)·MAC 고정 불필요 → 단일 NIC 그대로 사용,
-#   VIP = VM 사설 IP, 중첩 가상화 자동 감지(kvm/qemu 분기 + kvm 모듈 영속화), 스왑 보강.
+#   VIP = VM 사설 IP, 중첩 가상화 자동 감지(kvm/qemu 분기), 스왑 보강,
+#   kvm_intel 로드용 systemd 유닛(가비아 이미지가 /etc/modprobe.d/kvm.conf 로 블랙리스트 처리하므로 modules-load.d 불가).
 #
 # 스터디 기준 VM: 가비아 Standard 2vCore / 8GB / 50GB, Ubuntu 24.04 (2026-09-07 확정)
 #   - 8GB 환경이므로 스왑 8GB를 자동 생성하고, 스터디 밖 서비스(heat·fluentd 등)는 끈다
 #   - 가비아 VM은 중첩 가상화(VT-x)를 노출하므로 nova_compute_virt_type=kvm 으로 감지된다
+#   - 실측(2026-09-07): setup.sh 약 3.5분, 완료 직후 사용 메모리 약 550MB
 #
 # 하는 일 (deploy "직전"까지):
 #   [1/8] 환경 점검 (OS·RAM·디스크·NIC·가상화 자동 감지, passwordless sudo)
@@ -82,8 +84,27 @@ HOST_IP=$(ip -4 -o addr show dev "$IFACE" scope global | awk '{print $4}' | cut 
 if grep -qE '(vmx|svm)' /proc/cpuinfo; then
     VIRT_TYPE="kvm"
     KVM_MOD=$(grep -q vmx /proc/cpuinfo && echo kvm_intel || echo kvm_amd)
-    sudo modprobe "$KVM_MOD"
-    echo "$KVM_MOD" | sudo tee /etc/modules-load.d/kvm.conf >/dev/null
+    # 가비아 이미지는 /etc/modprobe.d/kvm.conf 에서 kvm_intel을 블랙리스트 → modules-load.d로는 부팅 시 로드되지 않는다
+    # (2026-09-07 실측: "Module 'kvm_intel' is deny-listed (by kmod)"). 명시적 modprobe는 블랙리스트를 무시하므로
+    # systemd 유닛으로 부팅 시 직접 로드한다. 가비아 파일은 건드리지 않는다(이미지 갱신 시 되돌아올 수 있음).
+    sudo rm -f /etc/modules-load.d/kvm.conf
+    sudo tee /etc/systemd/system/kvm-load.service >/dev/null <<EOF
+[Unit]
+Description=Load ${KVM_MOD} explicitly (image blacklists it) — study
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/modprobe ${KVM_MOD}
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now kvm-load.service >/dev/null
     [[ -e /dev/kvm ]] || warn "/dev/kvm 이 생성되지 않았습니다 — 배포는 진행되지만 인스턴스가 느릴 수 있습니다"
 else
     VIRT_TYPE="qemu"
