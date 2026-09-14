@@ -183,7 +183,26 @@ vda     253:0    0   50G  0 disk
 ```
 
 1. 네트워크 정보
-    - networkmanger 패키지를 설치했는데도 nmcli 명령어로는 확인할 수가 없음..
+    - networkmanger 패키지를 설치 후, active 상태임을 확인했음에도 nmcli 명령어로는 확인할 수가 없음..
+    - 이유 → 퍼블릭 클라우드에서는 실제 물리서버의 포트 정보를 확인할 수 있는 NetworkManger 같은 패키지의 사용을 deny 해놓는다고 함
+        - nmcli 명령어로는 실제 VM이 돌아가고 있는 서버의 포트, 본딩 정보까지 모두 확인할 수 있기 때문에 보안상 막아놓은 것으로 추정
+    - /etc/sysconfig/Network-scripts/ifcfg-ens192 와 nmcli의 비교
+        - RHEL 8버전 이후는 ifcfg를 직접 수정하는 방식 권장 X(최신 버전에서 지원 중단)
+            - ifcfg 파일 직접 수정 → NetworkManager Restart 해야해서, NIC 전체 순단 발생
+            - nmcli는 해당 NIC만 선택적으로 connection up을 하기 때문에 순단 X
+        
+        ```bash
+        ubuntu@vm-2:~$ cat /etc/NetworkManager/NetworkManager.conf 
+        [main]
+        plugins=ifupdown,keyfile
+        
+        [ifupdown]
+        managed=false # false 처리 해놓음 / 수정 X
+        
+        [device]
+        wifi.scan-rand-mac-address=no
+        ```
+        
 
 ```bash
 ubuntu@vm-2:~$ ifconfig
@@ -218,16 +237,16 @@ ubuntu@vm-2:~$ ip a
 
 **Q1. 6단계 중 시간이 실제로 걸리는 구간은 어디고, 왜 그런가요?**
 
-- 5단계(준비물 수집)와 6단계(기동)입니다. 1~4단계는 API 호출 및 배치 계산(소프트웨어적 결정)이라 수 초 내에 끝나지만, 5~6단계는 네트워크를 통한 이미지 다운로드, 가상 포트/IP 할당, QEMU 프로세스 실행 등 **실제 자원을 할당하고 부팅하는 물리적/네트워크 작업**이 수반되기 때문입니다.
+- 5단계(준비물 수집)와 6단계(기동)입니다. 1~4단계는 API 호출 및 배치 계산(소프트웨어적 결정)이라 수 초 내에 끝나지만, 5~6단계는 네트워크를 통한 이미지 다운로드, 가상 포트/IP 할당, QEMU 프로세스 실행 등 실제 자원을 할당하고 부팅하는 물리적/네트워크 작업이 동반되기 때문입니다.
 
 **Q2. 인스턴스가 대시보드에 보이는 시점과 실제로 존재하는 시점은 왜 다른가요? (몇 단계와 몇 단계 사이?)**
 
-- **2단계(접수)와 6단계(기동) 사이**의 시차 때문입니다. `nova-api`가 요청을 받자마자 DB에 상태를 `BUILD`로 기록하면서 대시보드에 즉시 노출되지만, 실제 Hypervisor 상에서 QEMU 프로세스가 떠서 부팅이 완료되는 것은 **6단계**가 끝나야 하기 때문입니다.
+- 2단계(접수)와 6단계(기동) 사이의 시차 때문입니다. `nova-api`가 요청을 받자마자 DB에 상태를 `BUILD`로 기록하면서 대시보드에 즉시 노출되지만, 실제 Hypervisor 상에서 QEMU 프로세스가 떠서 부팅이 완료되는 것은 6단계가 끝나야 하기 때문입니다.
 
 **Q3. 개인키와 공개키 중 서버에 저장되는 것은? 절대 남에게 전달하면 안 되는 것은?**
 
-- 서버에 저장되는 것: **공개키 (Public Key)**
-- 절대 남에게 전달하면 안 되는 것: **개인키 (Private Key)**
+- 서버에 저장되는 것: 공개키 (Public Key)
+- 절대 남에게 전달하면 안 되는 것: 개인키 (Private Key)
 
 **Q4. Connection timed out과 Connection refused는 각각 무엇이 problem이라는 신호인가요?**
 
