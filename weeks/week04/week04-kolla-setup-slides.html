@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>4회차 — Kolla-Ansible과 setup.sh</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --paper:#E8EDF1; --slide:#F6F8FA; --ink:#1B2733; --muted:#5B6B7A; --line:#C9D3DC;
+  --cobalt:#2F5BD3; --cobalt-soft:#DCE5FA; --amber:#B7791F; --amber-soft:#F7ECD6;
+  --term:#1E2A36; --term-ink:#D6E4F0; --term-dim:#7F93A6; --term-ok:#7FD1A6;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --mono:"JetBrains Mono","D2Coding",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F161D; --slide:#16202A; --ink:#DCE4EC; --muted:#93A3B2; --line:#2B3947;
+    --cobalt:#7C9CF0; --cobalt-soft:#1F2D4F; --amber:#E0A94A; --amber-soft:#3A2E17;
+    --term:#0C1218; --term-ink:#D6E4F0;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F161D; --slide:#16202A; --ink:#DCE4EC; --muted:#93A3B2; --line:#2B3947;
+  --cobalt:#7C9CF0; --cobalt-soft:#1F2D4F; --amber:#E0A94A; --amber-soft:#3A2E17;
+  --term:#0C1218; --term-ink:#D6E4F0;
+}
+*{box-sizing:border-box}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);overflow:hidden;word-break:keep-all;
+  display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+#stage{width:1280px;height:720px;position:relative;transform-origin:center center;flex:none}
+.slide{position:absolute;inset:0;background:var(--slide);border:1px solid var(--line);border-radius:6px;
+  padding:64px 80px 92px;display:none;flex-direction:column}
+.slide.on{display:flex}
+h1{font-size:64px;line-height:1.1;letter-spacing:-.02em;margin:0;font-weight:800}
+h2{font-size:40px;line-height:1.2;letter-spacing:-.015em;margin:0 0 36px;font-weight:750}
+p{font-size:24px;line-height:1.6;margin:0 0 16px;max-width:36em}
+.muted{color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+p code,li code,td code{background:var(--cobalt-soft);padding:1px 7px;border-radius:4px}
+
+/* rail: 세션 4파트 진행 표시 */
+.rail{position:absolute;left:80px;right:80px;bottom:34px;display:grid;grid-template-columns:15fr 5fr 20fr 5fr;gap:6px}
+.rail div{border-top:4px solid var(--line);padding-top:8px;font-size:15px;color:var(--muted)}
+.rail div.cur{border-color:var(--cobalt);color:var(--ink);font-weight:650}
+.rail div.done{border-color:color-mix(in srgb,var(--cobalt) 35%,var(--line))}
+.num{position:absolute;right:80px;top:30px;font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* title */
+.title{justify-content:flex-end;padding-bottom:140px}
+.title h1{font-size:92px}
+.title .kolla{font-family:var(--mono);color:var(--cobalt);font-size:26px;margin-bottom:28px;display:block}
+.title p{font-size:26px;margin-top:22px}
+
+/* agenda */
+.agenda{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:8px}
+.agenda .blk{border-left:4px solid var(--cobalt);padding:6px 0 6px 20px}
+.agenda .min{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums}
+.agenda .min small{font-size:20px;font-weight:600;color:var(--muted);margin-left:4px}
+.agenda .nm{font-size:22px;margin-top:6px;line-height:1.4}
+.note{margin-top:auto;background:var(--amber-soft);border-left:4px solid var(--amber);padding:16px 22px;font-size:22px;border-radius:0 4px 4px 0}
+
+/* ways */
+.ways{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.way{border:1px solid var(--line);padding:26px 26px 22px;border-radius:4px}
+.way h3{font-size:28px;margin:0 0 12px}
+.way p{font-size:20px;line-height:1.55;margin:0}
+.way.pick{border:2px solid var(--cobalt);background:var(--cobalt-soft)}
+.way .tag{display:inline-block;margin-top:16px;font-size:16px;color:var(--cobalt);font-weight:650}
+
+/* split name */
+.split{display:grid;grid-template-columns:1fr 60px 1fr;align-items:start;gap:0}
+.split .plus{font-size:64px;font-weight:300;color:var(--muted);text-align:center;margin-top:10px}
+.word{font-size:72px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.word + .gloss{font-size:18px;color:var(--cobalt);margin:10px 0 14px;font-family:var(--mono)}
+.split p{font-size:22px}
+.sum{margin-top:auto;font-size:28px;font-weight:650;border-top:1px solid var(--line);padding-top:22px}
+.sum span{display:block;font-size:21px;font-weight:400;color:var(--muted);margin-top:6px}
+
+/* three */
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.three h3{font-size:30px;margin:0 0 12px}
+.three p{font-size:21px;line-height:1.6}
+
+/* files */
+.files{display:flex;flex-direction:column;gap:18px}
+.file{display:grid;grid-template-columns:380px 1fr;gap:28px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:18px}
+.file .path{font-family:var(--mono);font-size:24px;font-weight:600}
+.file p{font-size:22px;margin:0}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(3,1fr) 36px repeat(3,1fr);gap:12px;align-items:stretch;margin-top:16px}
+.step{border:2px solid var(--cobalt);border-radius:4px;padding:18px 16px;background:var(--cobalt-soft)}
+.step.later{border:2px dashed var(--line);background:transparent;color:var(--muted)}
+.step .cmd{font-family:var(--mono);font-size:16px;white-space:nowrap;font-weight:700;display:block;margin-bottom:10px}
+.step p{font-size:17px;line-height:1.5;margin:0}
+.cut{position:relative}
+.cut::before{content:"";position:absolute;left:50%;top:-30px;bottom:-30px;border-left:3px solid var(--amber)}
+.cutlbl{display:grid;grid-template-columns:3fr 36px 3fr;gap:12px;margin-top:40px;font-size:21px}
+.cutlbl .a{color:var(--cobalt);font-weight:700}
+.cutlbl .b{color:var(--muted)}
+
+/* thesis */
+.thesis{justify-content:center}
+.thesis blockquote{margin:0;font-size:52px;line-height:1.35;font-weight:750;letter-spacing:-.015em;max-width:20em}
+.thesis .then{font-size:34px;margin-top:40px;color:var(--cobalt);font-weight:650}
+
+/* terminal */
+.term{background:var(--term);color:var(--term-ink);font-family:var(--mono);font-size:20px;line-height:1.65;
+  padding:22px 26px;border-radius:6px;white-space:pre;overflow-x:auto}
+.term .c{color:var(--term-dim)}
+.term .ok{color:var(--term-ok);font-weight:700}
+.run{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.steps8{list-style:none;margin:0;padding:0;font-size:19px;line-height:1.5}
+.steps8 li{display:grid;grid-template-columns:52px 1fr;padding:5px 0;border-bottom:1px solid var(--line)}
+.steps8 li b{font-family:var(--mono);color:var(--cobalt);font-weight:600}
+
+/* anatomy */
+.two{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;flex:1;min-height:0}
+.two p{font-size:21px}
+.check h4{font-size:17px;color:var(--muted);font-weight:600;margin:0 0 8px}
+.check .term{font-size:18px;padding:16px 20px}
+.trap{background:var(--amber-soft);border-left:4px solid var(--amber);padding:12px 18px;font-size:19px;line-height:1.55;margin:12px 0 16px;border-radius:0 4px 4px 0}
+.hosts{font-family:var(--mono);font-size:20px;line-height:1.8;border:1px solid var(--line);border-radius:4px;padding:14px 18px;margin-bottom:14px}
+.hosts del{color:var(--amber);text-decoration-thickness:2px}
+.hosts ins{text-decoration:none;color:var(--cobalt);font-weight:700}
+.kv{width:100%;border-collapse:collapse;font-size:16px}
+.kv td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.kv td:first-child{font-family:var(--mono);white-space:nowrap;font-weight:600}
+.kv td:nth-child(2){font-family:var(--mono);color:var(--cobalt)}
+.kv td:last-child{color:var(--muted)}
+
+/* veth svg */
+.veth svg{width:100%;height:auto}
+.veth text{font-family:var(--sans)}
+
+/* closing */
+.close-list{list-style:none;padding:0;margin:0;counter-reset:c}
+.close-list li{counter-increment:c;font-size:26px;padding:18px 0 18px 64px;position:relative;border-bottom:1px solid var(--line)}
+.close-list li::before{content:counter(c);position:absolute;left:0;top:14px;width:44px;height:44px;border-radius:50%;
+  background:var(--cobalt);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:22px}
+.close-list .mono{font-size:22px}
+
+/* controls */
+.ctrl{position:fixed;left:16px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:6px;z-index:5;opacity:.35;transition:opacity .2s}.ctrl:hover,.ctrl:focus-within{opacity:1}
+.ctrl button{font:inherit;font-size:14px;background:var(--slide);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px 12px;cursor:pointer}
+.ctrl button:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+@media print{body{overflow:visible;display:block;background:#fff}#stage{transform:none!important}.slide{position:relative;display:flex!important;page-break-after:always}.ctrl{display:none}}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1 -->
+<section class="slide title" data-part="-1">
+  <span class="kolla">κόλλα (kolla) — 그리스어로 '접착제'</span>
+  <h1>Kolla-Ansible,<br>그리고 setup.sh</h1>
+  <p class="muted">CloudClub 10기 오픈스택 스터디 4회차</p>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-part="0">
+  <h2>오늘 45분</h2>
+  <div class="agenda">
+    <div class="blk"><div class="min">15<small>분</small></div><div class="nm">Kolla-Ansible이<br>뭔가</div></div>
+    <div class="blk"><div class="min">5<small>분</small></div><div class="nm">setup.sh<br>실행</div></div>
+    <div class="blk"><div class="min">20<small>분</small></div><div class="nm">방금 내 VM에<br>뭐가 바뀌었나</div></div>
+    <div class="blk"><div class="min">5<small>분</small></div><div class="nm">재접속하고<br>인증</div></div>
+  </div>
+  <div class="note">오늘은 <b>READY ✅</b>까지. 실제 배포(pull · deploy)는 다음 주에 다 같이 합니다.</div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-part="0">
+  <h2>OpenStack은 어떻게 설치할까</h2>
+  <div class="ways">
+    <div class="way"><h3>수동 설치</h3><p>공식 Install Guide를 따라 Keystone, Glance, Nova, Neutron…을 서비스마다 apt로 깔고 설정 파일을 하나씩 채운다. 원리는 제일 잘 보이지만, 수십 개를 손으로.</p></div>
+    <div class="way"><h3>DevStack</h3><p>개발자가 코드 고쳐보려고 쓰는 올인원 스크립트. 금방 뜨지만 재부팅하면 끝. 운영도, 실습 환경 유지도 어렵다.</p></div>
+    <div class="way pick"><h3>Kolla-Ansible</h3><p>서비스를 전부 컨테이너로 띄우고, 설치 과정은 Ansible이 자동으로. 실제 운영 환경에서 쓰는 방식.</p><span class="tag">우리 스터디 · SU Cloud 운영계</span></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-part="0">
+  <h2>이름을 쪼개 보면</h2>
+  <div class="split">
+    <div>
+      <div class="word">Kolla</div><div class="gloss">OpenStack을 컨테이너 이미지로</div>
+      <p>keystone, nova-api, neutron-server… 서비스 하나당 도커 이미지 하나. 미리 만들어 quay.io에 올려둔다.</p>
+    </div>
+    <div class="plus">+</div>
+    <div>
+      <div class="word">Ansible</div><div class="gloss">서버 상태를 선언하고 뿌리기</div>
+      <p>"이 서버는 이런 상태가 돼야 한다"를 적어두면, 여러 서버에 SSH로 들어가 그 상태를 만들어준다.</p>
+    </div>
+  </div>
+  <div class="sum">Kolla가 만든 이미지를, Ansible로 서버에 깔아주는 도구
+    <span>비유하면 docker compose를 서버 여러 대에 Ansible로 뿌리는 것</span></div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-part="0">
+  <h2>왜 굳이 컨테이너일까</h2>
+  <div class="three">
+    <div><h3>격리</h3><p>OpenStack은 서비스가 수십 개고, 저마다 필요한 파이썬 라이브러리 버전이 다르다. 한 호스트에 다 깔면 서로 부딪힌다. 컨테이너면 각자 자기 방이 있다.</p></div>
+    <div><h3>업그레이드</h3><p>새 버전으로 올릴 때 패키지를 하나하나 갈지 않는다. 이미지 태그만 바꿔서 다시 띄우면 된다.</p></div>
+    <div><h3>복구</h3><p>서비스 하나가 꼬였으면 그 컨테이너만 지우고 다시 띄운다. 호스트는 건드리지 않는다.</p></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-part="0">
+  <h2>Ansible에서 알아둘 건 세 개</h2>
+  <div class="three">
+    <div><h3>인벤토리</h3><p>어느 서버가 무슨 역할인지 적은 목록. control, network, compute… 우리는 VM 한 대가 전부 맡는다(all-in-one).</p></div>
+    <div><h3>플레이북 · 롤</h3><p>실제로 수행할 작업 묶음. Kolla-Ansible이 수백 개를 이미 다 짜뒀다. 우리가 새로 쓸 일은 없다.</p></div>
+    <div><h3>멱등성</h3><p>몇 번을 다시 돌려도 결과가 같다. 이미 된 건 건너뛰고, 안 된 것만 한다. 실패하면 그냥 다시 돌리면 된다.</p></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-part="0">
+  <h2>그래서 우리가 만지는 파일은 딱 세 개</h2>
+  <div class="files">
+    <div class="file"><span class="path">/etc/kolla/all-in-one</span><p>인벤토리. 모든 역할이 localhost 한 대로 되어 있다. 멀티노드면 여기 호스트만 늘어난다.</p></div>
+    <div class="file"><span class="path">/etc/kolla/globals.yml</span><p>무엇을 켜고 끌지, 어느 NIC를 쓸지. Django로 치면 settings.py.</p></div>
+    <div class="file"><span class="path">/etc/kolla/passwords.yml</span><p>DB, RabbitMQ, Keystone… 모든 서비스 비밀번호. 잃어버리면 복구 방법이 없다.</p></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-part="0">
+  <h2>명령은 이 순서로 흘러간다</h2>
+  <div class="pipe">
+    <div class="step"><span class="cmd">install-deps</span><p>Kolla가 쓰는 Ansible 컬렉션 설치</p></div>
+    <div class="step"><span class="cmd">bootstrap-<br>servers</span><p>호스트에 Docker 설치 · 설정. 컨테이너 호스트로 만들기</p></div>
+    <div class="step"><span class="cmd">prechecks</span><p>배포해도 되는 상태인지 검사</p></div>
+    <div class="cut"></div>
+    <div class="step later"><span class="cmd">pull</span><p>이미지 수십 개 다운로드</p></div>
+    <div class="step later"><span class="cmd">deploy</span><p>컨테이너 띄우고 서비스 연결</p></div>
+    <div class="step later"><span class="cmd">post-deploy</span><p>admin 접속 정보 생성</p></div>
+  </div>
+  <div class="cutlbl"><span class="a">오늘은 여기까지 — setup.sh가 전부 해준다</span><span></span><span class="b">5·6회차</span></div>
+</section>
+
+<!-- 9 -->
+<section class="slide thesis" data-part="0">
+  <blockquote>Kolla-Ansible은 컨테이너 안쪽만 책임진다.<br>호스트는 이미 준비돼 있다고 가정한다.</blockquote>
+  <div class="then">setup.sh는 그 가정을 만들어주는 스크립트다.</div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-part="1">
+  <h2>실행해 봅시다</h2>
+  <div class="run">
+    <div>
+<div class="term"><span class="c"># 스크립트가 있는 폴더에서</span>
+file setup.sh      <span class="c"># CRLF가 보이면 안 됨</span>
+chmod +x setup.sh
+./setup.sh
+
+<span class="c"># 3~4분 뒤</span>
+<span class="ok">  READY ✅</span></div>
+      <p class="muted" style="font-size:19px;margin-top:18px">빨간 [실패] 줄이 뜨면 줄 번호까지 캡처해서 단톡방에. 나머지 분들은 기다리지 말고 다음으로 넘어갑니다.</p>
+    </div>
+    <ul class="steps8">
+      <li><b>1/8</b>환경 점검 — OS, RAM, NIC, 가상화</li>
+      <li><b>2/8</b>패키지 · chrony · 스왑</li>
+      <li><b>3/8</b>/etc/hosts 치환 · 커널 파라미터</li>
+      <li><b>4/8</b>veth-setup.service</li>
+      <li><b>5/8</b>kolla-venv · kolla-ansible 22.0.0</li>
+      <li><b>6/8</b>/etc/kolla — 인벤토리 · 비밀번호 · globals</li>
+      <li><b>7/8</b>install-deps · bootstrap-servers</li>
+      <li><b>8/8</b>prechecks</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-part="2">
+  <h2>① 호스트 전제 — 이름 해석, 시간, 메모리</h2>
+  <div class="two">
+    <div>
+      <div class="hosts"><del>127.0.1.1&nbsp;&nbsp;study-vm</del><br><ins>10.x.x.x&nbsp;&nbsp;&nbsp;study-vm</ins></div>
+      <p>우분투 기본값인 <code>127.0.1.1</code> 줄이 남아 있으면 RabbitMQ가 자기 이름을 루프백으로 해석해서, 루프백에만 귀를 연다. 다른 컨테이너는 전부 연결 거부.</p>
+      <div class="trap">/etc/hosts는 첫 번째로 맞는 줄이 이긴다. 그래서 밑에 한 줄 추가가 아니라, 그 줄 자체를 바꿔야 한다.</div>
+      <p style="font-size:19px" class="muted">chrony: 토큰에 시각이 박혀서, 시계가 틀리면 인증이 깨진다. 스왑 8GB: deploy 순간 피크에 OOM으로 죽지 않게.</p>
+    </div>
+    <div class="check"><h4>내 VM에서 확인</h4>
+<div class="term">cat /etc/hosts
+swapon --show
+chronyc tracking | head -3</div></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-part="2">
+  <h2>② 커널 파라미터 — 패킷을 넘겨주고, 버리지 않게</h2>
+  <div class="two">
+    <div>
+      <p><code>ip_forward=1</code> — 호스트가 인스턴스와 바깥 사이에서 라우터 노릇을 하려면 커널이 패킷을 넘겨줘야 한다. 원래 도커가 켜주는데, Kolla가 도커 쪽을 꺼두기 때문에 우리가 직접 켠다.</p>
+      <p><code>rp_filter=2</code> — 들어온 길과 나갈 길이 다른 패킷을 버리는 기능. 우리 구조는 길이 비대칭이라 strict(1)이면 FIP 응답이 <b>로그 한 줄 없이</b> 사라진다. loose(2)로.</p>
+      <div class="trap">7회차 트러블슈팅에서 다시 만납니다. "핑은 안 가는데 에러가 아무 데도 없다."</div>
+    </div>
+    <div class="check"><h4>내 VM에서 확인</h4>
+<div class="term">sysctl net.ipv4.ip_forward \
+  net.ipv4.conf.all.rp_filter
+cat /etc/sysctl.d/99-kolla.conf</div></div>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-part="2">
+  <h2>③ veth — 외부망 NIC이 없으니 가짜 랜선을</h2>
+  <div class="two" style="grid-template-columns:1.25fr 1fr">
+    <div class="veth">
+      <svg viewBox="0 0 620 380" role="img" aria-label="가비아 VM 안의 eth0, veth0-veth1 페어, br-ex 구조">
+        <rect x="8" y="8" width="604" height="364" rx="8" fill="none" stroke="var(--line)" stroke-width="2"/>
+        <text x="28" y="40" font-size="18" fill="var(--muted)">가비아 VM</text>
+        <!-- eth0 -->
+        <rect x="40" y="70" width="200" height="74" rx="6" fill="var(--cobalt-soft)" stroke="var(--cobalt)" stroke-width="2"/>
+        <text x="60" y="102" font-size="22" font-weight="700" fill="var(--ink)">eth0</text>
+        <text x="60" y="128" font-size="15" fill="var(--muted)">사설 IP · SSH · API · VIP</text>
+        <line x1="140" y1="70" x2="140" y2="20" stroke="var(--cobalt)" stroke-width="2" stroke-dasharray="4 4"/>
+        <text x="152" y="30" font-size="14" fill="var(--muted)">인터넷 (가비아 NAT)</text>
+        <text x="260" y="104" font-size="15" fill="var(--muted)">network_interface</text>
+        <!-- veth pair -->
+        <rect x="40" y="220" width="130" height="64" rx="6" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="62" y="250" font-size="20" font-weight="700" fill="var(--ink)">veth0</text>
+        <text x="62" y="272" font-size="14" fill="var(--muted)">UP만, 미부착</text>
+        <line x1="170" y1="252" x2="250" y2="252" stroke="var(--ink)" stroke-width="3"/>
+        <text x="176" y="240" font-size="13" fill="var(--muted)">한 가닥</text>
+        <rect x="250" y="220" width="130" height="64" rx="6" fill="var(--cobalt-soft)" stroke="var(--cobalt)" stroke-width="2"/>
+        <text x="272" y="250" font-size="20" font-weight="700" fill="var(--ink)">veth1</text>
+        <text x="272" y="272" font-size="14" fill="var(--muted)">IP 없음, UP</text>
+        <text x="250" y="312" font-size="15" fill="var(--muted)">neutron_external_interface</text>
+        <!-- br-ex -->
+        <line x1="380" y1="252" x2="424" y2="252" stroke="var(--cobalt)" stroke-width="3"/>
+        <rect x="424" y="200" width="176" height="104" rx="6" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="442" y="236" font-size="20" font-weight="700" fill="var(--ink)">br-ex</text>
+        <text x="442" y="260" font-size="14" fill="var(--muted)">deploy 때 OVS가</text>
+        <text x="442" y="280" font-size="14" fill="var(--muted)">veth1을 통째로 편입</text>
+        <text x="424" y="336" font-size="14" fill="var(--amber)">다음 주에 생김</text>
+      </svg>
+    </div>
+    <div>
+      <p style="font-size:20px">Kolla는 외부망 NIC으로 <b>IP 없는 빈 NIC</b>을 요구한다. 배포 때 OVS가 통째로 가져가니까. eth0을 주면 그 순간 SSH가 끊긴다.</p>
+      <div class="trap">veth0을 브리지에 물리면 플러딩이 밖으로 샌다. SU Cloud 운영계에서 실제로 난 장애. UP만 시켜두고 끝.</div>
+      <div class="check"><h4>내 VM에서 확인</h4>
+<div class="term">ip -br link
+systemctl cat veth-setup</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-part="2">
+  <h2>④ globals.yml — 무엇을 켜고, 무엇을 끌지</h2>
+  <div class="two" style="grid-template-columns:2.1fr 1fr;gap:32px">
+    <table class="kv">
+      <tr><td>kolla_base_distro</td><td>ubuntu</td><td>기본값은 rocky</td></tr>
+      <tr><td>kolla_internal_vip_address</td><td>사설 IP</td><td>공인 IP는 VM 밖 주소</td></tr>
+      <tr><td>network_interface</td><td>eth0</td><td>API · 관리망</td></tr>
+      <tr><td>neutron_external_interface</td><td>veth1</td><td>③의 빈 NIC</td></tr>
+      <tr><td>enable_haproxy</td><td>no</td><td>한 대에 LB는 불필요</td></tr>
+      <tr><td>enable_proxysql</td><td>no</td><td>기본 ON, 3306 충돌</td></tr>
+      <tr><td>neutron_plugin_agent</td><td>openvswitch</td><td>6·7회차 netns 실습</td></tr>
+      <tr><td>enable_heat · fluentd …</td><td>no</td><td>범위 밖, 메모리 절약</td></tr>
+    </table>
+    <div class="check"><h4>내 VM에서 확인 — 주석 빼고 실제 값만</h4>
+<div class="term">grep -v '^#' \
+  /etc/kolla/globals.yml \
+  | grep -v '^$'</div>
+      <p style="font-size:18px;margin-top:16px" class="muted"><code>openstack_release</code>는 일부러 안 적었다. 22.0.0 기본값이 정답이고, 잘못 적으면 pull이 실패한다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-part="2">
+  <h2>prechecks — 우리가 만든 전제를 Kolla가 검사한다</h2>
+  <div class="two">
+    <div>
+      <p>VIP가 실제 인터페이스에 있나 · 필요한 포트가 비어 있나 · 두 NIC이 존재하고 UP인가 · Docker와 의존성은 맞나. 결국 setup.sh 전체가 <b>prechecks를 통과시키기 위한 작업 목록</b>이다.</p>
+      <div class="trap"><code>--use-test-images</code>는 prechecks에만 있는 옵션. pull이나 deploy에 붙이면 <code>unrecognized arguments</code>로 바로 죽는다.</div>
+      <p style="font-size:20px">그리고 bootstrap-servers는 우리 계정을 docker 그룹에 넣는 걸 빠뜨린다. setup.sh가 대신 넣었지만, 그룹은 <b>새로 로그인해야</b> 반영된다.</p>
+    </div>
+    <div class="check"><h4>내 VM에서 확인</h4>
+<div class="term">ls /etc/kolla
+ls ~/kolla-backup
+id | tr ',' '\n' | grep docker</div></div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-part="3">
+  <h2>마무리</h2>
+  <ol class="close-list">
+    <li><span class="mono">exit</span> 후 다시 SSH 접속</li>
+    <li><span class="mono">docker ps</span> — sudo 없이 되면 성공</li>
+    <li>READY ✅ 화면 캡처해서 단톡방에 인증</li>
+    <li>다음 주: tmux 안에서 pull · deploy. 컨테이너 수십 개가 올라오는 걸 봅니다</li>
+  </ol>
+</section>
+
+<div class="rail" aria-hidden="true"><div>Kolla-Ansible</div><div>실행</div><div>뭐가 바뀌었나</div><div>마무리</div></div>
+<div class="num" id="num"></div>
+</div>
+
+<div class="ctrl">
+  <button id="prev" aria-label="이전 슬라이드">이전</button>
+  <button id="next" aria-label="다음 슬라이드">다음</button>
+  <button id="fs" aria-label="전체 화면">전체 화면</button>
+</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var rail=[].slice.call(document.querySelectorAll('.rail div'));
+  var stage=document.getElementById('stage'), num=document.getElementById('num');
+  var i=0;
+  function fit(){
+    var s=Math.min(window.innerWidth/1300, window.innerHeight/740);
+    stage.style.transform='scale('+s+')';
+  }
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(el,k){el.classList.toggle('on',k===i)});
+    var p=+slides[i].dataset.part;
+    rail.forEach(function(el,k){el.classList.toggle('cur',k===p);el.classList.toggle('done',k<p)});
+    document.querySelector('.rail').style.visibility=p<0?'hidden':'visible';
+    num.textContent=(i+1)+' / '+slides.length;
+    if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  document.addEventListener('keydown',function(e){
+    if(['ArrowRight','PageDown',' ','Enter'].indexOf(e.key)>=0){e.preventDefault();show(i+1)}
+    else if(['ArrowLeft','PageUp','Backspace'].indexOf(e.key)>=0){e.preventDefault();show(i-1)}
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+    else if(e.key==='f'||e.key==='F')toggleFs();
+  });
+  function toggleFs(){
+    if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}
+    else{document.exitFullscreen&&document.exitFullscreen()}
+  }
+  document.getElementById('prev').onclick=function(){show(i-1)};
+  document.getElementById('next').onclick=function(){show(i+1)};
+  document.getElementById('fs').onclick=toggleFs;
+  var tx=null;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',function(e){if(tx===null)return;var d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)show(i+(d<0?1:-1));tx=null});
+  window.addEventListener('resize',fit);
+  window.addEventListener('hashchange',function(){var n=parseInt(location.hash.slice(1),10);if(n&&n-1!==i)show(n-1)});
+  fit();
+  show((parseInt(location.hash.slice(1),10)||1)-1);
+})();
+</script>
+</body>
+</html>

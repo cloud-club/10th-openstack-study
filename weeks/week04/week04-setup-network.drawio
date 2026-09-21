@@ -1,0 +1,157 @@
+<mxfile host="Electron" pages="2">
+  <diagram name="1. setup.sh 후 (4회차)" id="0">
+    <mxGraphModel dx="1574" dy="893" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="760" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c2" parent="1" style="text;html=1;whiteSpace=wrap;fontFamily=Pretendard;fontSize=13;align=left;verticalAlign=middle;fontSize=20;" value="&lt;b&gt;setup.sh가 만들어두는 네트워크&lt;/b&gt; — 4회차 READY 시점" vertex="1">
+          <mxGeometry height="36" width="900" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;align=center;" value="인터넷" vertex="1">
+          <mxGeometry height="50" width="150" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="가비아 NAT&lt;br&gt;공인 IP (VM 밖 주소)" vertex="1">
+          <mxGeometry height="50" width="230" x="250" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" source="c3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;" target="c4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=none;strokeColor=#1B2733;strokeWidth=2;;verticalAlign=top;spacingTop=8;fontStyle=1;fontSize=14;" value="&lt;span style=&quot;color: rgb(51, 51, 255);&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;가비아 VM  (Ubuntu 24.04 · 2vCPU · 8GB)&lt;/span&gt;" vertex="1">
+          <mxGeometry height="560" width="1020" x="40" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="c7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#DCE5FA;strokeColor=#2F5BD3;" value="&lt;b&gt;eth0&lt;/b&gt;&lt;br&gt;사설 IP (예: 10.x.x.x)&lt;br&gt;SSH · API · 관리 트래픽" vertex="1">
+          <mxGeometry height="90" width="210" x="80" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" source="c4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;endArrow=none;" target="c7" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="365" y="130" />
+              <mxPoint x="185" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="&lt;b&gt;network_interface&lt;/b&gt; = eth0&lt;br&gt;&lt;b&gt;kolla_internal_vip_address&lt;/b&gt; = 사설 IP&lt;br&gt;haproxy·keepalived 끔 → VIP = 호스트 IP" vertex="1">
+          <mxGeometry height="90" width="300" x="310" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="c10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="&lt;b&gt;/etc/hosts&lt;/b&gt;&lt;br&gt;&lt;s&gt;127.0.1.1 호스트명&lt;/s&gt; → &lt;b&gt;사설IP 호스트명&lt;/b&gt; 으로 치환&lt;br&gt;호스트명이 eth0 IP로 풀려야 RabbitMQ가 루프백에 안 붙음" vertex="1">
+          <mxGeometry height="90" width="390" x="630" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="c11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="&lt;b&gt;커널 파라미터&lt;/b&gt;  (/etc/sysctl.d/99-kolla.conf)&lt;br&gt;&lt;b&gt;ip_forward = 1&lt;/b&gt;  호스트가 패킷을 넘겨줌 (라우터 역할)&lt;br&gt;   Kolla가 도커의 ip_forward 관리를 꺼서 직접 켬&lt;br&gt;&lt;b&gt;rp_filter = 2&lt;/b&gt;  들어온 길 ≠ 나갈 길이어도 버리지 않음" vertex="1">
+          <mxGeometry height="110" width="440" x="80" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="c12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#1E2A36;strokeColor=#1E2A36;fontColor=#D6E4F0;" value="&lt;b&gt;Docker 엔진&lt;/b&gt;  (bootstrap-servers가 설치)&lt;br&gt;지금은 컨테이너 0개 → 5회차 deploy에서 수십 개 생성&lt;br&gt;Kolla 컨테이너는 &lt;b&gt;host 네트워크&lt;/b&gt;를 그대로 씀&lt;br&gt;→ 위의 eth0 · /etc/hosts · 커널 설정이 곧 서비스의 네트워크" vertex="1">
+          <mxGeometry height="110" width="460" x="560" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="c13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#8A99A8;dashed=1;" value="&lt;b&gt;veth0&lt;/b&gt;&lt;br&gt;UP만 · 어디에도 미부착&lt;br&gt;(브리지에 물리면 플러딩 유출)" vertex="1">
+          <mxGeometry height="80" width="170" x="70" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="c14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#DCE5FA;strokeColor=#2F5BD3;" value="&lt;b&gt;veth1&lt;/b&gt;&lt;br&gt;IP 없음 · UP&lt;br&gt;= neutron_external_interface" vertex="1">
+          <mxGeometry height="80" width="170" x="340" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" source="c13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" value="veth 페어&lt;div&gt;(가상 랜선 한 가닥)&lt;/div&gt;">
+          <mxGeometry relative="1" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+            <mxPoint x="250" y="520" as="sourcePoint" />
+            <mxPoint x="340" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;dashed=1;" value="&lt;b&gt;br-ex&lt;/b&gt;  (아직 없음)&lt;br&gt;5회차 deploy 때 OVS가 생성하고&lt;br&gt;veth1을 포트로 통째로 편입" vertex="1">
+          <mxGeometry height="100" width="210" x="600" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" source="c14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;dashed=1;strokeColor=#B7791F;" target="c16" value="deploy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="&lt;b&gt;재부팅 생존용 systemd&lt;/b&gt;&lt;br&gt;veth-setup.service&lt;br&gt;kvm-load.service" vertex="1">
+          <mxGeometry height="100" width="180" x="840" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="c19" parent="1" style="text;html=1;whiteSpace=wrap;fontFamily=Pretendard;fontSize=13;align=left;verticalAlign=middle;fontSize=12;fontColor=#5B6B7A;" value="실선 = setup.sh가 오늘 만든 것 · &lt;font color=&#39;#B7791F&#39;&gt;주황 점선&lt;/font&gt; = 배포 후에 생기는 것&lt;br&gt;외부망 NIC이 하나뿐이라 eth0을 넘기면 SSH가 끊김 → 빈 NIC 역할을 veth1이 대신함" vertex="1">
+          <mxGeometry height="80" width="940" x="80" y="600" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="2. 배포 후 미리보기 (5·6회차)" id="1">
+    <mxGraphModel dx="853" dy="893" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="760" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c2" parent="1" style="text;html=1;whiteSpace=wrap;fontFamily=Pretendard;fontSize=13;align=left;verticalAlign=middle;fontSize=20;" value="&lt;b&gt;배포하면 이렇게 된다&lt;/b&gt; — 5회차 deploy + 6회차 init.sh 이후" vertex="1">
+          <mxGeometry height="36" width="900" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;align=center;" value="인터넷" vertex="1">
+          <mxGeometry height="50" width="150" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F6F8FA;strokeColor=#C9D3DC;" value="가비아 NAT&lt;br&gt;공인 IP" vertex="1">
+          <mxGeometry height="50" width="230" x="250" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" source="c3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;" target="c4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=none;strokeColor=#1B2733;strokeWidth=2;;verticalAlign=top;spacingTop=8;fontStyle=1;fontSize=14;" value="가비아 VM" vertex="1">
+          <mxGeometry height="580" width="1020" x="40" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="c7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#DCE5FA;strokeColor=#2F5BD3;" value="&lt;b&gt;eth0&lt;/b&gt;  사설 IP" vertex="1">
+          <mxGeometry height="70" width="210" x="80" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" source="c4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;" target="c7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;" value="&lt;b&gt;iptables MASQUERADE&lt;/b&gt;  (init.sh)&lt;br&gt;192.168.200.0/24 → eth0 로 나갈 때 주소 변환" vertex="1">
+          <mxGeometry height="70" width="320" x="330" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" source="c9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;" target="c7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;" value="&lt;b&gt;br-ex&lt;/b&gt;  (OVS)&lt;br&gt;192.168.200.1  ← init.sh가 부여&lt;br&gt;포트: veth1" vertex="1">
+          <mxGeometry height="90" width="210" x="80" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" source="c11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=0.9;exitY=0;entryX=0.5;entryY=1;" target="c9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#8A99A8;dashed=1;" value="veth0 (미부착)" vertex="1">
+          <mxGeometry height="50" width="130" x="80" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="c14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#DCE5FA;strokeColor=#2F5BD3;align=center;spacingLeft=0;" value="veth1" vertex="1">
+          <mxGeometry height="50" width="60" x="230" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" source="c14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.86;entryY=1;" target="c11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" source="c13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;" target="c14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;" value="&lt;b&gt;qrouter-xxx&lt;/b&gt;  (netns)&lt;br&gt;qg: 192.168.200.2  (외부, 고정)&lt;br&gt;qr: 10.10.10.1  (내부 게이트웨이)&lt;br&gt;FIP ↔ 사설 IP 변환 (DNAT/SNAT)" vertex="1">
+          <mxGeometry height="110" width="260" x="340" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="c18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;" value="&lt;b&gt;qdhcp-xxx&lt;/b&gt;  (netns)&lt;br&gt;10.10.10.0/24&lt;br&gt;IP 나눠주기" vertex="1">
+          <mxGeometry height="90" width="170" x="630" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="c19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;" value="&lt;b&gt;cirros 인스턴스&lt;/b&gt;&lt;br&gt;10.10.10.x&lt;br&gt;FIP 192.168.200.101~150" vertex="1">
+          <mxGeometry height="110" width="190" x="830" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="c20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fontFamily=Pretendard;fontSize=13;align=left;spacingLeft=10;spacingRight=8;verticalAlign=middle;fillColor=#F7ECD6;strokeColor=#B7791F;align=center;" value="&lt;b&gt;br-int&lt;/b&gt;  (OVS 통합 브리지) — 라우터·DHCP·인스턴스 포트가 모두 여기 붙음" vertex="1">
+          <mxGeometry height="60" width="680" x="340" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="c21" edge="1" parent="1" source="c11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.85;entryX=0;entryY=0.5;" target="c20" value="patch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" source="c17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.13;entryY=0;" target="c20" value="qg · qr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c23" edge="1" parent="1" source="c18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.51;entryY=0;" target="c20" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c24" edge="1" parent="1" source="c19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;fontFamily=Pretendard;fontSize=12;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.86;entryY=0;" target="c20" value="tap">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c25" parent="1" style="text;html=1;whiteSpace=wrap;fontFamily=Pretendard;fontSize=13;align=left;verticalAlign=middle;fontSize=12;fontColor=#5B6B7A;" value="&lt;b&gt;provider_network&lt;/b&gt; 192.168.200.0/24 — br-ex 쪽, 라우터 외부 IP .2 고정, FIP 풀 .101~.150&lt;br&gt;&lt;b&gt;tenant_network&lt;/b&gt; 10.10.10.0/24 — br-int 쪽, 인스턴스 사설망&lt;br&gt;&lt;code&gt;sudo ip netns&lt;/code&gt; 로 qrouter · qdhcp 가 보임 → 6·7회차 실습 (ML2/OVS를 고른 이유)" vertex="1">
+          <mxGeometry height="110" width="680" x="340" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="c26" parent="1" style="text;html=1;whiteSpace=wrap;fontFamily=Pretendard;fontSize=13;align=left;verticalAlign=middle;fontSize=12;fontColor=#5B6B7A;" value="패킷 경로 (인스턴스 → 인터넷)&lt;br&gt;인스턴스 → br-int → qrouter(SNAT) → br-ex → MASQUERADE → eth0 → 가비아 NAT" vertex="1">
+          <mxGeometry height="110" width="230" x="80" y="550" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
