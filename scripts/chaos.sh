@@ -24,13 +24,15 @@ SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChe
 read -r -d '' REMOTE <<'EOF'
 set -u
 S=""; [ "$(id -u)" -ne 0 ] && S="sudo"
+# Kolla는 컨테이너를 systemd 유닛으로 관리 → docker stop은 바로 재시작됨
+svc() { $S systemctl "$1" "kolla-$2-container.service"; }
 os() { ( source ~/kolla-venv/bin/activate && source /etc/kolla/admin-openrc.sh && openstack "$@" ); }
 default_sg() { os security group list --project admin -f value -c ID -c Name | awk '$2=="default"{print $1; exit}'; }
 
 case "$ACTION:$SCN" in
-  break:keystone)  $S docker stop keystone ;;
-  break:scheduler) $S docker stop nova_scheduler ;;
-  break:ovs_agent) $S docker stop neutron_openvswitch_agent ;;
+  break:keystone)  svc stop keystone ;;
+  break:scheduler) svc stop nova_scheduler ;;
+  break:ovs_agent) svc stop neutron_openvswitch_agent ;;
   break:quota)     os quota set --instances 0 admin ;;
   break:sg22)
     SG=$(default_sg)
@@ -38,7 +40,7 @@ case "$ACTION:$SCN" in
       os security group rule delete "$R"
     done ;;
   heal:*)
-    for C in keystone nova_scheduler neutron_openvswitch_agent; do $S docker start "$C"; done
+    for C in keystone nova_scheduler neutron_openvswitch_agent; do svc start "$C"; done
     # keystone이 다시 토큰을 줄 때까지 대기 (최대 60초)
     for _ in $(seq 1 20); do os token issue >/dev/null 2>&1 && break; sleep 3; done
     os quota set --instances 10 admin
