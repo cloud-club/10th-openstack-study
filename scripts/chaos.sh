@@ -33,7 +33,10 @@ case "$ACTION:$SCN" in
   break:keystone)  svc stop keystone ;;
   break:scheduler) svc stop nova_scheduler ;;
   break:ovs_agent) svc stop neutron_openvswitch_agent ;;
-  break:quota)     os quota set --instances 0 admin ;;
+  break:quota)
+    # nova는 이미 쓰는 개수보다 낮게 못 줄임 → 현재 개수로 꽉 채워서 "새로 하나 더"를 막음
+    USED=$(os server list -f value -c ID | wc -l)
+    os quota set --instances "$USED" admin ;;
   break:sg22)
     SG=$(default_sg)
     for R in $(os security group rule list "$SG" --ingress --protocol tcp -f value -c ID -c "Port Range" | awk '$2=="22:22"{print $1}'); do
