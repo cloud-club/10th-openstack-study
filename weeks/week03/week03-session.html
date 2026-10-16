@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3회차 — 버튼 뒤의 6단계 + 가비아 VM 접속</title>
+<style>
+  :root{
+    --bg:#EEF1F4; --paper:#FFFFFF; --ink:#1B2330; --muted:#5B6B7C; --line:#D5DBE2;
+    --red:#DA1A32; --red-soft:#FBE9EC; --mono:ui-monospace,"Cascadia Code",Consolas,"D2Coding",monospace;
+    --sans:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{display:flex;flex-direction:column;overflow:hidden}
+
+  .stage{flex:1;position:relative}
+  .slide{position:absolute;inset:0;display:none;padding:6vh 8vw 12vh;max-width:1400px;margin:0 auto}
+  .slide.on{display:block}
+
+  .kicker{font-size:1.1rem;color:var(--muted);margin-bottom:.9rem}
+  .kicker b{color:var(--red);font-weight:600}
+  h1{font-size:clamp(2rem,4.6vw,4rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;margin-bottom:1.4rem;max-width:22ch}
+  h2{font-size:clamp(1.5rem,3.2vw,2.6rem);font-weight:700;line-height:1.25;margin-bottom:1.6rem;max-width:30ch}
+  p,li{font-size:clamp(1.05rem,1.7vw,1.5rem);line-height:1.55}
+  .lede{max-width:34ch;color:var(--muted)}
+  ul{list-style:none}
+  li+li{margin-top:.55em}
+  .num{display:inline-block;min-width:1.6em;color:var(--red);font-weight:700}
+  code{font-family:var(--mono);font-size:.9em;background:var(--paper);border:1px solid var(--line);padding:.05em .4em;border-radius:4px}
+  pre{font-family:var(--mono);font-size:clamp(.9rem,1.35vw,1.15rem);line-height:1.5;background:var(--paper);border:1px solid var(--line);padding:1rem 1.25rem;border-radius:6px;white-space:pre;overflow:auto;max-width:72ch}
+  pre .c{color:var(--muted)}
+
+  /* agenda */
+  .agenda{display:grid;grid-template-columns:auto 1fr;gap:.5rem 1.5rem;align-items:baseline;margin-top:1rem}
+  .agenda .t{font-family:var(--mono);color:var(--red);font-size:1.2em}
+
+  /* relay flow */
+  .flow{display:flex;align-items:stretch;gap:.6rem;margin:1.2rem 0 .4rem;flex-wrap:wrap}
+  .flow .box{flex:1 1 0;min-width:120px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:.9rem .8rem;position:relative}
+  .flow .box .n{font-family:var(--mono);color:var(--red);font-weight:700;font-size:1.1rem}
+  .flow .box .who{font-weight:700;font-size:clamp(1rem,1.5vw,1.3rem);margin-top:.3rem;min-height:1.4em}
+  .flow .box .what{color:var(--muted);font-size:clamp(.85rem,1.2vw,1.05rem);line-height:1.4;margin-top:.25rem}
+  .flow .box .who,.flow .box .what{visibility:hidden}
+  .flow .box .q{position:absolute;right:.7rem;top:.7rem;color:var(--line);font-size:1.6rem;font-weight:700}
+  .flow .box.open .who,.flow .box.open .what{visibility:visible}
+  .flow .box.open .q{display:none}
+  .flow .box{cursor:pointer}
+  .flow .box.next{border-color:var(--ink)}
+  .flow .box.slow{border-color:var(--red);background:var(--red-soft)}
+
+  /* quiz / reveal */
+  .q-text{font-size:clamp(1.4rem,2.8vw,2.4rem);font-weight:600;line-height:1.35;max-width:30ch;margin-bottom:1.4rem}
+  .hint{color:var(--muted)}
+  .reveal{margin-top:1.4rem;border-left:4px solid var(--red);padding:.4rem 0 .4rem 1.2rem;display:none}
+  .reveal.open{display:block}
+  .reveal p,.reveal li{font-size:clamp(.95rem,1.45vw,1.25rem)}
+  button.ans{margin-top:1.2rem;font:inherit;font-size:1rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:.55em 1.1em;border-radius:6px;cursor:pointer}
+  button.ans:hover{border-color:var(--ink)}
+  button.ans:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  table{border-collapse:collapse;margin-top:.8rem;font-size:clamp(.9rem,1.35vw,1.15rem)}
+  th,td{text-align:left;padding:.4em .9em .4em 0;vertical-align:top;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500}
+
+  /* two-column / big */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:1rem}
+  .big{font-size:clamp(2.2rem,5vw,4.2rem);font-weight:700;line-height:1.1}
+  .big small{display:block;font-size:.4em;font-weight:500;color:var(--muted);margin-top:.4em}
+  .check{display:inline-block;background:var(--red);color:#fff;font-size:.8em;font-weight:600;padding:.15em .6em;border-radius:4px;margin-left:.5em;vertical-align:middle}
+
+  /* leader notes */
+  .note{margin-top:2rem;color:var(--muted);font-size:1rem;border-top:1px dashed var(--line);padding-top:.8rem;display:none;max-width:70ch}
+  body.notes .note{display:block}
+
+  /* status bar (tmux-like) */
+  .bar{height:9vh;min-height:56px;background:var(--ink);color:#C9D2DC;display:flex;align-items:center;padding:0 2vw;font-family:var(--mono);font-size:clamp(.8rem,1.15vw,1rem);gap:0}
+  .bar .seg{padding:.45em .9em;white-space:nowrap;border-right:1px solid #3A4656;cursor:pointer}
+  .bar .seg.cur{background:var(--red);color:#fff}
+  .bar .seg.done{color:#7E8B99}
+  .bar .clock{margin-left:auto;display:flex;gap:1.6em}
+  .bar .clock span b{color:#fff;font-weight:600}
+  .bar .help{color:#7E8B99}
+
+  @media (max-width:800px){
+    .slide{padding:4vh 6vw 14vh}
+    .two{grid-template-columns:1fr}
+    .bar .help{display:none}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .reveal.open{animation:up .18s ease-out}
+    @keyframes up{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+<!-- 0 -->
+<section class="slide on" data-seg="0">
+  <p class="kicker">CloudClub 10기 · OpenStack 스터디 시즌1 · <b>3회차</b> · 9/14(월) 22:00</p>
+  <h1>버튼 뒤의 6단계,<br>그리고 가비아 VM 접속</h1>
+  <p class="lede">오늘의 한 문장 — 버튼 하나는 여섯 서비스의 릴레이다. 그 릴레이를 돌릴 무대에 오늘 처음 들어간다.</p>
+  <div class="agenda">
+    <span class="t">05분</span><span>도입 퀴즈 — 예습 질문 4개, 채팅으로</span>
+    <span class="t">10분</span><span>6단계 그림 릴레이 — 한 명씩 "다음엔 무슨 일이?"</span>
+    <span class="t">05분</span><span>VM의 4가지 재료</span>
+    <span class="t">05분</span><span>Kolla vs Kolla-Ansible 한 장</span>
+    <span class="t">35분</span><span>배포받은 VM에 SSH 접속 + 검증 — 다같이</span>
+  </div>
+  <p class="note">이번 회차부터 손을 움직인다. 1부는 25분 안에 끊는다 — 퀴즈는 한 문제 1분, 릴레이가 늘어지면 재료·Kolla 슬라이드는 각 2분으로. 2부에서 미리 접속한 사람 먼저 ✅ 받고 옆 사람 돕게 하기.</p>
+</section>
+
+<!-- Q1 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>도입 퀴즈 1/4</b> — 예습 질문. 답을 채팅에 한 줄로.</p>
+  <p class="q-text">6단계 중 시간이 실제로 걸리는 구간은 어디고, 왜 그런가요?</p>
+  <button class="ans" type="button">답 보기 (A)</button>
+  <div class="reveal">
+    <p><strong>5(준비물 수집) · 6(기동).</strong> 이미지를 네트워크로 받고 QEMU 프로세스를 띄우는 "실물" 작업이라 수십 초. 1~4는 인증·접수·배치·전달 같은 "결정"이라 수 초.</p>
+    <p class="hint">→ 인스턴스 생성이 느리면 의심할 곳은 5~6부터.</p>
+  </div>
+  <p class="note">채팅 답 몇 개 읽어주고 열기. "5·6"만 맞으면 통과, 이유까지 말한 사람 한 명 지목해 부연.</p>
+</section>
+
+<!-- Q2 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>도입 퀴즈 2/4</b></p>
+  <p class="q-text">인스턴스가 대시보드에 보이는 시점과 실제로 존재하는 시점은 왜 다른가요? 몇 단계와 몇 단계 사이?</p>
+  <button class="ans" type="button">답 보기 (A)</button>
+  <div class="reveal">
+    <p><strong>2단계(nova-api가 DB에 BUILD 기록)와 6단계(QEMU 기동, ACTIVE) 사이.</strong> nova-api는 접수하자마자 DB에 쓰고, 대시보드는 그 DB를 읽어 그리니까 아직 아무것도 안 만들어졌는데 보입니다.</p>
+    <p class="hint">→ "화면에 보이는 것"과 "실제로 존재하는 것"의 간극 — 클라우드 트러블슈팅의 출발점.</p>
+  </div>
+  <p class="note">릴레이 정리 슬라이드의 관점 1번과 같은 얘기. 여기서 한 번 짚고 릴레이 뒤에 다시 연결.</p>
+</section>
+
+<!-- Q3 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>도입 퀴즈 3/4</b></p>
+  <p class="q-text">개인키와 공개키 중 서버에 저장되는 것은? 절대 남에게 전달하면 안 되는 것은?</p>
+  <button class="ans" type="button">답 보기 (A)</button>
+  <div class="reveal">
+    <p><strong>서버에 저장되는 건 공개키</strong>(<code>~/.ssh/authorized_keys</code>). <strong>절대 전달 금지는 개인키</strong>(<code>.pem</code>). 개인키 유출 = 그 서버 뚫린 것과 같음.</p>
+    <p class="hint">→ 오늘 DM으로 받은 <code>.pem</code>이 개인키. 단톡방·화면공유에 절대 노출 금지.</p>
+  </div>
+  <p class="note">2부 화면공유 때 키 파일 내용이 터미널에 뜨지 않게 미리 경고. 리더 공개키가 같이 등록돼 있다는 것도 여기서 한 줄.</p>
+</section>
+
+<!-- Q4 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>도입 퀴즈 4/4</b></p>
+  <p class="q-text"><code>Connection timed out</code>과 <code>Connection refused</code>는 각각 무엇이 문제라는 신호인가요?</p>
+  <button class="ans" type="button">답 보기 (A)</button>
+  <div class="reveal">
+    <p><strong>timed out = 길이 막힘.</strong> 패킷이 서버까지 못 감 — 방화벽·IP 오타·내 네트워크. <strong>refused = 도착했는데 문전박대.</strong> 서버까진 갔는데 22번 포트에서 거부 — sshd 미기동 등 서버 쪽.</p>
+    <p class="hint">→ 이 구분 하나로 트러블슈팅 방향이 절반으로 줄어듦. 오늘 2부에서 바로 씀.</p>
+  </div>
+  <p class="note">오늘 SSH 타임아웃은 십중팔구 방화벽 소스 IP. 이 슬라이드 끝나면 바로 릴레이로.</p>
+</section>
+
+<!-- 1 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>릴레이</b> — 제가 한 명 지목하면, 그 단계에서 무슨 일이 일어나는지 한 문장. 막히면 다음 사람이 이어받기.</p>
+  <p class="q-text">"인스턴스 생성" 버튼을 누르면, 안에서 무슨 일이 순서대로 일어날까요?</p>
+  <div class="flow">
+    <div class="box"><span class="n">1</span><span class="q">?</span><div class="who">Keystone</div><div class="what">인증, 토큰 발급 — "너 누구야?"</div></div>
+    <div class="box"><span class="n">2</span><span class="q">?</span><div class="who">nova-api</div><div class="what">접수, DB에 BUILD 기록 — "VM 하나 주문이요"</div></div>
+    <div class="box"><span class="n">3</span><span class="q">?</span><div class="who">scheduler</div><div class="what">Placement 조회 → Filter/Weigh → 호스트 결정 — "자리 배정"</div></div>
+    <div class="box"><span class="n">4</span><span class="q">?</span><div class="who">conductor → compute</div><div class="what">RabbitMQ로 작업 전달(cast) — "주방에 주문서"</div></div>
+    <div class="box slow"><span class="n">5</span><span class="q">?</span><div class="who">Glance · Neutron</div><div class="what">이미지 가져오기, 포트·IP 할당 (볼륨은 Cinder) — "재료 준비"</div></div>
+    <div class="box slow"><span class="n">6</span><span class="q">?</span><div class="who">libvirt → QEMU</div><div class="what">VM 프로세스 기동, ACTIVE — "요리 시작"</div></div>
+  </div>
+  <button class="ans" type="button">1단계 열기 (A)</button>
+  <div class="reveal">
+    <p>붉은 칸(5·6)이 <strong>시간이 실제로 걸리는 구간</strong>. 1~4는 "결정"이라 수 초, 5~6은 "실물 준비"라 수십 초 이상. 인스턴스 생성이 느리면 의심할 곳은 여기.</p>
+  </div>
+  <p class="note">A를 누를 때마다 한 단계씩 열림(6번 뒤 한 번 더 누르면 정리 문장, 또 누르면 전부 닫힘). 지목한 사람이 말한 뒤에 그 단계를 열어 확인. 칸을 직접 클릭해도 열리고 닫힘. 4단계에서 conductor를 말하면 "예습자료엔 생략했지만 맞다, 2회차에 나온 그 부품"으로 받아주기. 틀려도 이름 부르지 않고 다음 사람에게 넘김.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>릴레이 정리</b> — 여섯 단계에서 가져갈 관점 셋</p>
+  <ul>
+    <li><span class="num">1</span><strong>빠른 구간과 느린 구간이 나뉜다.</strong> 1~4 결정(수 초), 5~6 실물(수십 초). 대시보드에 보이는 시점(2단계 BUILD)과 실제로 존재하는 시점(6단계 ACTIVE)의 간극이 트러블슈팅의 출발점.</li>
+    <li><span class="num">2</span><strong>모든 단계가 로그를 남긴다.</strong> 요청마다 <code>req-</code>로 시작하는 ID가 붙고, 여러 서비스 로그에 같은 ID가 찍힌다. 7회차 심화 미션이 이 ID로 6단계를 추적하는 것.</li>
+    <li><span class="num">3</span><strong>가비아도 같은 일을 했다.</strong> 오늘 여러분이 받은 VM을 만들 때 가비아 안에서도 본질적으로 같은 단계가 돌았다. 오늘 배운 건 OpenStack 지식이 아니라 클라우드가 동작하는 방식.</li>
+  </ul>
+  <p style="margin-top:1.6rem" class="lede">이 여섯 단계를 6회차에 여러분이 버튼으로 직접 실행하고, 7회차에 로그에서 흔적을 찾게 됩니다.</p>
+  <p class="note">예습 질문 1·2가 여기서 답이 됨. 시간 없으면 3번만 말하고 넘어가기.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>VM의 4가지 재료</b> — 6회차에 그대로 쓰는 값</p>
+  <table>
+    <tr><th>재료</th><th>뜻</th><th>우리가 쓸 값</th></tr>
+    <tr><td><strong>Image</strong></td><td>VM의 설치 원본</td><td>CirrOS (~20MB 초경량 리눅스)</td></tr>
+    <tr><td><strong>Flavor</strong></td><td>VM 사양 세트</td><td>m1.tiny (1 vCPU / 512MB)</td></tr>
+    <tr><td><strong>Key Pair</strong></td><td>SSH 열쇠</td><td>6회차에 생성</td></tr>
+    <tr><td><strong>Security Group</strong></td><td>인스턴스 방화벽</td><td>ICMP + TCP 22 허용</td></tr>
+  </table>
+  <p style="margin-top:1.8rem" class="lede">오늘 여러분이 받은 가비아 VM에도 이 넷이 똑같이 있습니다 — Ubuntu 24.04 이미지, 2vCore/8GB 스펙, 개인키, 22·80·6080 방화벽.</p>
+  <p class="note">"6단계 5번(Glance·Neutron)이 가져오는 게 Image와 Key Pair·Security Group"으로 앞 슬라이드와 연결. init.sh가 이미지·flavor·SG 규칙을 만들어둔다는 건 4회차에.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-seg="1">
+  <p class="kicker"><b>Kolla vs Kolla-Ansible</b> — 한 장</p>
+  <div class="two">
+    <div>
+      <p class="big">Kolla<small>OpenStack 서비스들의 <strong>컨테이너 이미지</strong>. 2회차 <code>docker ps</code>의 28개가 이것</small></p>
+    </div>
+    <div>
+      <p class="big">Kolla-Ansible<small>그 이미지들을 <strong>배포·설정하는 도구</strong>. globals.yml · passwords.yml · inventory를 읽어 순서대로 띄움</small></p>
+    </div>
+  </div>
+  <p style="margin-top:2.4rem" class="lede">설정 파일 셋은 전부 <code>setup.sh</code>가 자동 생성합니다. "스크립트가 뭘 대신해주는지"만 알면 됩니다 — 다음 주 4회차에 같이 실행.</p>
+  <p class="note">여기서 버전(22.0.0 / 2026.1 Gazpacho) 얘기 꺼내지 않기 — 4회차 setup.sh 슬라이드에서. 1부 끝. 시계 확인: 22:25 넘었으면 바로 2부.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-seg="2">
+  <p class="kicker"><b>2부</b> — 배포받은 VM에 접속 <span class="check">체크포인트 1</span></p>
+  <p class="lede" style="margin-bottom:1rem">미리 접속해 본 사람은 채팅에 ✅ 찍고, 화면 공유 보며 대기하거나 옆 사람 돕기.</p>
+  <pre><span class="c"># 키 파일 권한 먼저 (mac/Linux — Windows PowerShell은 이 줄 생략)</span>
+chmod 600 mykey.pem
+ssh -i mykey.pem ubuntu@&lt;공인IP&gt;</pre>
+  <table style="margin-top:1.4rem">
+    <tr><th>메시지</th><th>뜻</th><th>조치</th></tr>
+    <tr><td><code>authenticity of host…</code></td><td>이 서버 처음 보는데 믿을래?</td><td><code>yes</code> (예습 B3)</td></tr>
+    <tr><td><code>Permission denied (publickey)</code></td><td>키 또는 계정명이 틀림</td><td><code>-i</code> 경로, 권한 600, 계정 <code>ubuntu</code>, DM 받은 키가 내 VM 것인지</td></tr>
+    <tr><td><code>Connection timed out</code></td><td>길이 막힘 — 방화벽·IP</td><td>카페/핫스팟이면 IP가 달라짐 → 리더에게 IP 추가 요청</td></tr>
+    <tr><td><code>Connection refused</code></td><td>도착했는데 문전박대 — 서버 쪽</td><td>부팅 직후면 잠시 대기</td></tr>
+  </table>
+  <p class="note">5분 룰. 타임아웃은 십중팔구 소스 IP — 가비아 콘솔에서 방화벽 규칙 추가는 내가 즉시. Permission denied는 Windows 파일 속성 → 보안 → 본인만 읽기. 키 분실은 리더 키로 들어가 새 공개키 주입.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-seg="2">
+  <p class="kicker"><b>2부</b> — VM 안에서 검증 + 기본 도구 <span class="check">체크포인트 2</span></p>
+  <pre>lsb_release -a &amp;&amp; nproc &amp;&amp; free -h &amp;&amp; df -h /   <span class="c"># 스펙 확인</span>
+ip a                                  <span class="c"># 사설 IP·인터페이스명</span>
+egrep -c '(vmx|svm)' /proc/cpuinfo    <span class="c"># 중첩 가상화 플래그</span>
+sudo apt update &amp;&amp; sudo apt install -y git tmux</pre>
+  <button class="ans" type="button">이렇게 나오면 정상 (A)</button>
+  <div class="reveal">
+    <ul>
+      <li><span class="num">·</span>Ubuntu 24.04 · <strong>2 vCPU · 7.x GB · 50GB</strong> — 8GB가 7.x로 찍히는 건 커널 예약분. 내 것만 작은 게 아닙니다</li>
+      <li><span class="num">·</span><code>ip a</code>에 <strong>공인 IP가 안 보이는 게 정상</strong> — 가비아가 NAT로 붙여주는 구조. 6회차 Floating IP가 바로 이 개념</li>
+      <li><span class="num">·</span><code>egrep</code> 결과 <strong>1 이상</strong> — 다음 슬라이드에서 전원 결과 모읍니다</li>
+    </ul>
+  </div>
+  <p class="note">apt upgrade는 여기서 돌리지 않는다 — 마무리에서 tmux에 걸어두기. 리더 공개키가 등록돼 있다는 것 한 줄 재안내, 원치 않으면 authorized_keys에서 삭제 가능.</p>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-seg="2">
+  <p class="kicker"><b>결과 모으기</b> — <code>egrep -c '(vmx|svm)' /proc/cpuinfo</code> 숫자를 채팅에</p>
+  <div class="two">
+    <div>
+      <p class="big">1 이상<small>중첩 가상화 플래그 있음 → 6회차 인스턴스가 KVM으로 수 초 만에 뜸. <strong>우리 환경은 이쪽.</strong></small></p>
+    </div>
+    <div>
+      <p class="big">0<small>QEMU 에뮬레이션 모드 → 부팅 1~2분. 오늘 환경에선 나오면 안 되는 값 — 저에게 알려주세요</small></p>
+    </div>
+  </div>
+  <p style="margin-top:2.4rem" class="lede">플래그가 있는 것과 커널 모듈이 올라오는 건 다른 얘기입니다. 모듈은 4회차 <code>setup.sh</code>가 처리합니다 — 오늘은 숫자 확인까지만.</p>
+  <p class="note">프리런에서 KVM 부팅 확인됨. 가비아가 kvm_intel을 블랙리스트해서 setup.sh에 kvm-load.service를 넣은 얘기는 4회차에 — 오늘 꺼내면 길어짐. 0이 나오면 그 사람 VM 스펙 콘솔에서 확인.</p>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-seg="3">
+  <p class="kicker"><b>마무리</b> — tmux 30초, 그리고 바로 실전</p>
+  <pre>tmux new -s upgrade          <span class="c"># 세션 열기</span>
+sudo apt upgrade -y &amp;&amp; echo DONE
+<span class="c"># Ctrl+b, d  → 빠져나오기. SSH 끊어도 계속 돌아감</span>
+tmux attach -t upgrade       <span class="c"># 다음에 접속해서 결과 확인</span></pre>
+  <ul style="margin-top:1.4rem">
+    <li><span class="num">1</span>10명이 지금 동시에 upgrade를 돌리면 수 분씩 걸립니다. 세션 안에서 기다리지 않고 <strong>걸어두고 나가기</strong>.</li>
+    <li><span class="num">2</span>커널이 올라갔다는 메시지가 보이면 <code>sudo reboot</code> 한 번. 4회차 전까지만 끝내면 됩니다.</li>
+    <li><span class="num">3</span>5회차 deploy는 이 tmux 안에서 밤새 돌아갑니다 — 오늘이 예행연습.</li>
+  </ul>
+  <p class="note">시간 남으면 "Ctrl+b, d"를 한 번씩 직접 해보게. 시간 없으면 명령 세 줄만 단톡방에 올리고 끝.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-seg="3">
+  <p class="kicker"><b>완료 기준</b> — 그리고 4회차</p>
+  <ul>
+    <li><span class="num">1</span><strong>오늘 인증</strong>: SSH 접속 화면 + 검증 명령 출력 스크린샷을 단톡방에. upgrade 완료는 필수 아님</li>
+    <li><span class="num">2</span>못 끝낸 사람은 주중 리더 SSH/화면공유 지원으로 <strong>4회차 전까지</strong>. 4회차 앞 15분 보강 슬롯도 있음</li>
+    <li><span class="num">3</span>크레딧 규칙: 1인 1VM, 여분 VM 금지, 시즌 종료 후 일괄 삭제</li>
+    <li><span class="num">4</span><strong>4회차 9/21(월)</strong>: 30~40분 가벼운 세션 — <code>setup.sh</code>를 다같이 실행. 추석 전이라 짧게</li>
+  </ul>
+  <p style="margin-top:1.6rem" class="lede">4회차 예습은 "setup.sh가 대신해주는 것들" — 스왑, 커널 모듈, Kolla 설정 파일. 자료는 주초에 올립니다.</p>
+  <p class="note">오늘 답 못 한 질문은 노션 Q&amp;A로. 4회차 자료 만들 때 오늘 egrep 결과 분포와 free -h 질문을 반영.</p>
+</section>
+
+</div>
+
+<div class="bar">
+  <span class="seg" data-i="0">시작</span>
+  <span class="seg" data-i="1">1부 25'</span>
+  <span class="seg" data-i="2">2부 35'</span>
+  <span class="seg" data-i="3">마무리</span>
+  <span class="clock">
+    <span>경과 <b id="el">00:00</b></span>
+    <span>지금 <b id="now">--:--</b></span>
+    <span class="help">← → 넘기기 · A 답 · N 리더메모 · S 타이머 리셋</span>
+  </span>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const segs=[...document.querySelectorAll('.bar .seg')];
+  let i=0;
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('on',k===i));
+    const cur=+slides[i].dataset.seg;
+    segs.forEach(s=>{const k=+s.dataset.i;s.classList.toggle('cur',k===cur);s.classList.toggle('done',k<cur);});
+    location.hash=i;
+  }
+  document.querySelectorAll('button.ans').forEach(b=>b.addEventListener('click',()=>toggle(b)));
+  function toggle(b){
+    const r=b.nextElementSibling;
+    const f=b.parentElement.querySelector('.flow');
+    if(f){ // relay: one step per press
+      const boxes=[...f.querySelectorAll('.box')];
+      const n=boxes.filter(x=>x.classList.contains('open')).length;
+      if(n<boxes.length&&!r.classList.contains('open')){
+        boxes[n].classList.add('open');
+        const k=n+1;
+        b.textContent=k<boxes.length?(k+1)+'단계 열기 (A)':'정리 보기 (A)';
+      }else if(!r.classList.contains('open')){
+        r.classList.add('open');b.textContent='전부 닫기 (A)';
+      }else{
+        boxes.forEach(x=>x.classList.remove('open'));r.classList.remove('open');b.textContent='1단계 열기 (A)';
+      }
+      boxes.forEach(x=>x.classList.remove('next'));
+      const m=boxes.filter(x=>x.classList.contains('open')).length;
+      if(m<boxes.length&&!r.classList.contains('open'))boxes[m].classList.add('next');
+      return;
+    }
+    const o=r.classList.toggle('open');
+    const lbl=b.dataset.lbl||b.textContent.replace(/\s*\(A\)$/,'');b.dataset.lbl=lbl;
+    b.textContent=(o?'닫기':lbl)+' (A)';
+  }
+  document.querySelectorAll('.flow .box').forEach(x=>x.addEventListener('click',()=>x.classList.toggle('open')));
+  (function(){const f=document.querySelector('.flow');if(f)f.querySelector('.box').classList.add('next');})();
+  let t0=Date.now();
+  function tick(){
+    const s=Math.floor((Date.now()-t0)/1000);
+    document.getElementById('el').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    const d=new Date();document.getElementById('now').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+  setInterval(tick,1000);tick();
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='BUTTON'&&e.key===' ')return;
+    switch(e.key){
+      case 'ArrowRight':case 'PageDown':case ' ':show(i+1);break;
+      case 'ArrowLeft':case 'PageUp':show(i-1);break;
+      case 'a':case 'A':{const b=slides[i].querySelector('button.ans');if(b)toggle(b);break;}
+      case 'n':case 'N':document.body.classList.toggle('notes');break;
+      case 's':case 'S':t0=Date.now();tick();break;
+    }
+  });
+  segs.forEach(s=>s.addEventListener('click',()=>{const k=+s.dataset.i;const n=slides.findIndex(x=>+x.dataset.seg===k);if(n>=0)show(n);}));
+  const h=parseInt(location.hash.slice(1));show(isNaN(h)?0:h);
+})();
+</script>
+</body>
+</html>

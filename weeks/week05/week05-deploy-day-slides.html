@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5회차 deploy 데이 | CloudClub 10기 오픈스택 스터디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --outer:#dfe5ea;
+  --paper:#f5f7f9;
+  --ink:#17212b;
+  --muted:#5a6773;
+  --rule:#cdd5dc;
+  --yellow:#f2b705;
+  --yellow-soft:#fff3c4;
+  --teal:#0f7b80;
+  --teal-soft:#d9eeee;
+  --red:#c2372c;
+  --red-soft:#fbe4e1;
+  --term:#16212c;
+  --term-ink:#d9e2e9;
+  --term-dim:#7d8c99;
+  --term-hi:#7fc9cc;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--outer);font-family:var(--sans);color:var(--ink);overflow:hidden}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{width:1280px;height:720px;background:var(--paper);position:relative;transform-origin:center center;box-shadow:0 2px 0 var(--rule)}
+
+/* ---------- pipeline rail (the one bold element) ---------- */
+#rail{position:absolute;top:28px;left:56px;right:56px;display:flex;gap:10px;align-items:flex-end}
+.box{flex:1;height:40px;border:2px solid var(--rule);border-radius:3px;position:relative;
+  display:flex;align-items:center;justify-content:center;font:600 13px var(--mono);color:var(--muted);
+  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.04) 9px 11px);transition:all .35s ease}
+.box small{position:absolute;top:-19px;left:0;font:500 11px var(--sans);color:var(--muted);letter-spacing:.02em}
+.box.done{border-color:var(--teal);background:repeating-linear-gradient(90deg,var(--teal-soft) 0 9px,#c8e4e5 9px 11px);color:var(--teal)}
+.box.done::after{content:"✓";position:absolute;right:8px;font-size:13px}
+.box.today{border-color:var(--ink);border-style:dashed;color:var(--ink)}
+.box.now{border:2px solid var(--ink);background:repeating-linear-gradient(90deg,var(--yellow) 0 9px,#e0a800 9px 11px);color:var(--ink);height:52px}
+.box.later{opacity:.55}
+
+/* ---------- slides ---------- */
+.slide{position:absolute;inset:108px 56px 64px 56px;display:none;flex-direction:column}
+.slide.on{display:flex}
+h1{font-size:64px;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:38px;font-weight:700;line-height:1.2;letter-spacing:-.01em;margin-bottom:22px}
+.lead{font-size:22px;color:var(--muted);line-height:1.6;max-width:30em}
+p,li{font-size:21px;line-height:1.6}
+ul{list-style:none}
+ul.plain li{padding-left:22px;position:relative;margin-bottom:8px}
+ul.plain li::before{content:"";position:absolute;left:2px;top:.72em;width:8px;height:8px;background:var(--ink)}
+code{font-family:var(--mono);font-size:.88em;background:#e6ebef;padding:1px 6px;border-radius:3px}
+.cols{display:grid;gap:36px;grid-template-columns:1fr 1fr;align-items:start}
+.cols3{display:grid;gap:24px;grid-template-columns:repeat(3,1fr)}
+.muted{color:var(--muted)}
+
+pre.term{background:var(--term);color:var(--term-ink);font:400 19px/1.65 var(--mono);padding:20px 24px;border-radius:4px;overflow-x:auto;white-space:pre}
+pre.term .c{color:var(--term-dim)}
+pre.term .p{color:var(--term-hi)}
+pre.term .k{color:var(--yellow);font-weight:600}
+
+.note{border-left:5px solid var(--ink);padding:10px 0 10px 18px;font-size:19px;line-height:1.6}
+.note.warn{border-color:var(--red);background:var(--red-soft);padding:14px 18px}
+.note.tip{border-color:var(--teal)}
+.cp{display:inline-flex;align-items:center;gap:10px;background:var(--yellow);font-weight:700;font-size:17px;padding:5px 14px 5px 10px;border-radius:3px;align-self:flex-start;margin-bottom:14px}
+.cp::before{content:"";width:12px;height:12px;border:2px solid var(--ink);border-radius:2px}
+
+/* title slide */
+.title-wrap{margin-top:auto;margin-bottom:auto}
+.title-meta{font-size:22px;color:var(--muted);margin-bottom:26px}
+.title-sub{font-size:26px;margin-top:26px;line-height:1.55;max-width:26em}
+.three{display:flex;gap:14px;margin-top:40px}
+.three div{font:600 19px var(--mono);border:2px solid var(--ink);padding:10px 16px;border-radius:3px}
+
+/* week columns */
+.wk{border-top:6px solid var(--rule);padding-top:14px}
+.wk h3{font-size:22px;margin-bottom:8px}
+.wk .d{font-size:15px;color:var(--muted);margin-bottom:10px}
+.wk.done{border-color:var(--teal)}
+.wk.now{border-color:var(--yellow)}
+.wk p{font-size:18px}
+
+/* timeline */
+.tl{display:grid;grid-template-columns:110px 1fr;row-gap:0;margin-top:6px}
+.tl .t{font:600 20px var(--mono);padding:14px 0;border-top:1px solid var(--rule)}
+.tl .e{font-size:20px;padding:14px 0;border-top:1px solid var(--rule);line-height:1.5}
+.tl .e b{display:inline-block;min-width:4.5em}
+.tl .e span{color:var(--muted);font-size:17px}
+.tl .hl{background:var(--yellow-soft)}
+
+/* table */
+table{border-collapse:collapse;width:100%;font-size:18px}
+th{text-align:left;font-weight:700;padding:9px 12px;border-bottom:2px solid var(--ink)}
+td{padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.5}
+td code{font-size:15px}
+tr.extra td{background:var(--yellow-soft)}
+
+/* order diagram */
+.flow{display:flex;align-items:stretch;gap:0;margin:8px 0 24px}
+.flow div{flex:1;border:2px solid var(--ink);padding:14px 14px;font-size:17px;line-height:1.5;margin-right:-2px;background:#fff}
+.flow div b{display:block;font-size:19px;margin-bottom:4px}
+.flow div.key{background:var(--yellow)}
+.cycle{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:18px}
+.cycle span{border:1.5px solid var(--rule);padding:6px 12px;border-radius:20px;background:#fff}
+.cycle i{font-style:normal;color:var(--muted)}
+
+
+/* init.sh slides */
+.vs{display:grid;grid-template-columns:150px 1fr 1fr;font-size:19px}
+.vs div{padding:11px 14px;border-bottom:1px solid var(--rule);line-height:1.5}
+.vs .h{font-weight:700;border-bottom:2px solid var(--ink)}
+.vs .l{color:var(--muted)}
+.vs .ini{background:var(--yellow-soft)}
+.need{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:14px}
+.need div{border:2px solid var(--ink);margin-right:-2px;padding:12px 14px;font-size:17px;line-height:1.5;background:#fff}
+.need b{display:block;font:600 17px var(--mono);margin-bottom:2px}
+.beat{display:grid;grid-template-columns:170px 1fr;font-size:19px}
+.beat div{padding:10px 0;border-top:1px solid var(--rule);line-height:1.55}
+.beat .l{font-weight:700;padding-right:12px}
+.beat .bad{color:var(--red)}
+.fig{width:100%;height:auto;display:block}
+.step{font:600 15px var(--mono);color:var(--muted);margin-bottom:6px}
+
+/* chrome */
+#foot{position:absolute;left:56px;right:56px;bottom:22px;display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+#clock{font:600 14px var(--mono);color:var(--ink)}
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#1f2a35;color:#e8eef3;
+  font:17px/1.7 var(--sans);padding:18px 28px 22px;transform:translateY(100%);transition:transform .25s ease;z-index:10}
+#notes.show{transform:none}
+#notes h4{font-size:13px;color:#9fb0bf;font-weight:500;margin-bottom:6px}
+#hint{position:fixed;right:14px;top:10px;font-size:12px;color:#6b7884;z-index:5}
+.navbtn{position:fixed;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:transparent;font-size:28px;color:#8a97a3;cursor:pointer;z-index:5}
+.navbtn:hover,.navbtn:focus-visible{color:var(--ink);outline:2px solid var(--ink)}
+#prev{left:6px}#next{right:6px}
+@media (prefers-reduced-motion:reduce){.box,#notes{transition:none}}
+</style>
+</head>
+<body>
+<div id="hint">← → 이동 · N 대본 · F 전체화면</div>
+<button class="navbtn" id="prev" aria-label="이전 슬라이드">‹</button>
+<button class="navbtn" id="next" aria-label="다음 슬라이드">›</button>
+
+<div id="viewport"><div id="stage">
+  <div id="rail" aria-label="kolla-ansible 진행 단계"></div>
+
+  <!-- 1 -->
+  <section class="slide" data-stage="today" data-time="22:00"
+    data-notes="오늘은 5회차 deploy 데이입니다. 지난주에 setup.sh로 prechecks까지 통과시켜 놨죠. 오늘은 그 위에 OpenStack을 실제로 올립니다. 여러분이 직접 치는 명령은 딱 세 줄이고, 나머지 시간은 로그를 같이 구경합니다. 그리고 미리 말하면, deploy는 오늘 세션 안에 안 끝납니다. 그게 정상이에요.">
+    <div class="title-wrap">
+      <div class="title-meta">CloudClub 10기 오픈스택 스터디, 5회차, 9/28(월) 22:00</div>
+      <h1>deploy 데이</h1>
+      <p class="title-sub">치는 명령은 세 줄. 나머지는 기다리면서 구경합니다.<br>deploy는 세션 안에 안 끝나고, 그게 정상입니다.</p>
+      <div class="three"><div>source activate</div><div>kolla-ansible pull</div><div>kolla-ansible deploy</div></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-stage="today" data-time="22:02"
+    data-notes="위에 있는 띠가 kolla-ansible 명령 순서입니다. 초록색 세 칸은 지난주 setup.sh가 끝낸 겁니다. 그때 docker ps 쳐보면 빈 표였죠? 오늘은 노란 칸 두 개, pull과 deploy입니다. pull은 이미지만 받고, deploy가 그 이미지로 컨테이너를 실제로 띄웁니다. 오늘 끝나면 비어 있던 docker ps가 채워져요. post-deploy는 6회차, 10월 6일 화요일입니다.">
+    <h2>지난주에 어디까지 왔고, 오늘은 어디까지 가나</h2>
+    <div class="cols3">
+      <div class="wk done"><div class="d">4회차, 9/21</div><h3>setup.sh로 prechecks까지</h3>
+        <p>Docker 엔진은 돌고 있지만 컨테이너는 0개. 이미지도 아직 없음.</p></div>
+      <div class="wk now"><div class="d">5회차, 오늘</div><h3>pull, 그리고 deploy</h3>
+        <p><b>pull</b>은 이미지만 받는다. <b>deploy</b>가 그 이미지로 컨테이너를 만들고 띄운다.</p></div>
+      <div class="wk"><div class="d">6회차, 10/6(화)</div><h3>post-deploy와 init.sh</h3>
+        <p>접속 정보 파일을 만들고, 네트워크와 이미지를 준비해서 cirros에 SSH까지.</p></div>
+    </div>
+    <p class="note" style="margin-top:36px">지난주 끝에 <code>docker ps</code>는 헤더만 있는 빈 표였습니다. 오늘 끝나면 여기가 수십 줄로 채워집니다.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-stage="today" data-time="22:04"
+    data-notes="오늘 60분은 이렇게 갑니다. pull 도는 동안 6회차에 쓸 init.sh도 미리 뜯어봅니다. 핵심은 22시 10분에 pull 걸고, pull 끝나는 대로 deploy 거는 것. 22시 40분쯤엔 deploy가 에러 없이 흐르는 것만 확인하고 tmux에 걸어둔 채 해산합니다. 완료 인증은 주중에 각자.">
+    <h2>오늘 60분</h2>
+    <div class="tl">
+      <div class="t">22:00</div><div class="e"><b>도입</b> READY 확인, 시작 전 점검(docker 그룹, tmux) <span>(10분)</span></div>
+      <div class="t hl">22:10</div><div class="e hl"><b>pull</b> tmux 열고 pull 시작 <span>(10~20분)</span></div>
+      <div class="t">~</div><div class="e"><b>구경</b> 컨테이너와 VM 한 문장 발표, pull 로그와 2회차 컴포넌트 표 짝짓기</div>
+      <div class="t">22:18</div><div class="e"><b>init.sh</b> 6회차에 돌릴 스크립트 미리 뜯어보기 <span>(10분)</span></div>
+      <div class="t hl">22:30</div><div class="e hl"><b>deploy</b> 본 배포 시작, 초반 5분 로그 전원 확인 <span>(총 30~60분)</span></div>
+      <div class="t">22:40</div><div class="e"><b>해산</b> tmux에서 빠져나오기, 주중 인증과 막혔을 때 안내</div>
+      <div class="t">22:50</div><div class="e"><b>여유</b> 늦게 끝나는 pull 기다리기, 질문</div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-stage="prechecks" data-time="22:06"
+    data-notes="시작 전에 네 가지만 확인합니다. 첫째 READY 인증. 미인증자는 오늘 deploy를 못 가고 7회차 구제 트랙으로 갑니다. 둘째, id 쳐서 docker가 보이는지. 지난주에 재접속하라고 한 이유가 이거예요. 그룹이 안 잡힌 세션에서 pull이나 deploy를 돌리면 중간에 permission denied로 죽습니다. SU Cloud에서 실제로 걸렸던 함정입니다. 안 보이면 exit하고 다시 접속하세요. 셋째, docker ps가 sudo 없이 되고 빈 표가 나오면 정상. 넷째, tmux -V 쳐서 버전 뜨는지. setup.sh가 깔아뒀지만 없으면 apt로 설치하세요.">
+    <h2>시작 전에 네 가지만</h2>
+    <div class="cols">
+      <div>
+        <ul class="plain">
+          <li><b>READY ✅ 인증</b>을 했는지. 미인증자는 오늘 deploy 대신 7회차 구제 트랙으로 갑니다.</li>
+          <li><b>docker 그룹</b>이 잡혀 있는지. 안 보이면 <code>exit</code> 후 SSH 재접속.</li>
+          <li><b>docker ps</b>가 sudo 없이 되고, 빈 표가 나오면 정상.</li>
+          <li><b>tmux</b>가 있는지. setup.sh가 설치해 두었지만, 없으면 <code>sudo apt install -y tmux</code>.</li>
+        </ul>
+      </div>
+      <div>
+<pre class="term"><span class="p">$</span> id | grep -o docker
+<span class="c">docker          ← 이 줄이 떠야 함</span>
+
+<span class="p">$</span> docker ps
+<span class="c">CONTAINER ID   IMAGE   ...  ← 헤더만</span>
+
+<span class="p">$</span> tmux -V
+<span class="c">tmux 3.x        ← 버전이 뜨면 OK</span></pre>
+      </div>
+    </div>
+    <p class="note warn" style="margin-top:28px">그룹이 안 잡힌 세션에서 돌리면 pull이나 deploy 도중에 <code>permission denied</code>로 죽습니다. 여기서 걸러내세요.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-stage="pull" data-time="22:10"
+    data-notes="첫 번째 명령. tmux부터 엽니다. 오늘의 생명줄이에요. 온라인이라 와이파이가 끊기거나 노트북 덮으면 SSH가 끊기는데, tmux 안에서 돌린 작업은 서버에서 계속 돌아갑니다. 그다음 venv 활성화. setup.sh가 kolla-ansible을 이 venv에 깔아놨어요. 프롬프트 앞에 (kolla-venv)가 붙으면 됩니다.">
+    <h2>첫 번째 줄: tmux 열고 venv 켜기</h2>
+    <div class="cols">
+<pre class="term"><span class="p">$</span> <span class="k">tmux new -s kolla</span>
+<span class="p">$</span> <span class="k">source ~/kolla-venv/bin/activate</span>
+<span class="c">(kolla-venv) $   ← 이렇게 바뀌면 OK</span></pre>
+      <div>
+        <p style="margin-bottom:16px">tmux는 오늘의 생명줄입니다. SSH가 끊겨도 tmux 안에서 돌린 작업은 서버에서 계속 돌아갑니다.</p>
+        <p class="muted">venv는 setup.sh가 kolla-ansible을 설치해 둔 파이썬 환경입니다. 켜지 않으면 <code>kolla-ansible: command not found</code>가 뜹니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-stage="pull" data-time="22:12"
+    data-notes="두 번째 명령, pull입니다. 이미지만 미리 받아요. 왜 따로 하냐면, deploy 도중에 이미지를 받다가 네트워크가 튀면 배포가 중간에 죽습니다. 미리 받아두면 deploy가 훨씬 안정적이에요. 10분에서 20분 걸립니다. 끝나면 PLAY RECAP이 뜨고 failed가 0이면 체크포인트 1 통과. 타임아웃 나면 같은 명령 다시 치세요. 받은 건 건너뜁니다.">
+    <div class="cp">체크포인트 1</div>
+    <h2>두 번째 줄: 이미지 미리 받기</h2>
+<pre class="term"><span class="c">(kolla-venv)</span> <span class="p">$</span> <span class="k">kolla-ansible pull -i /etc/kolla/all-in-one</span>
+<span class="c">...
+PLAY RECAP *********************************
+localhost : ok=..  changed=..  failed=0   ← 통과</span></pre>
+    <div class="cols" style="margin-top:26px">
+      <p class="note tip"><b>왜 pull을 따로 하나.</b> deploy 도중에 이미지를 받다가 네트워크가 튀면 배포가 중간에 죽습니다. 미리 받아두면 deploy가 안정적입니다.</p>
+      <p class="note"><b>타임아웃이 나면</b> 같은 명령을 다시 치면 됩니다. 이미 받은 이미지는 건너뜁니다.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-stage="pull" data-time="22:13"
+    data-notes="pull 도는 동안 예습 답부터 맞춰봅시다. 컨테이너와 VM의 차이 한 문장, 돌아가면서 말해볼까요. 그다음 실물 확인. tmux에서 Ctrl+b 누르고 c 누르면 새 창이 생깁니다. 거기서 docker images를 치면 이미지가 계속 늘어나요. 근데 docker ps는 여전히 비어 있습니다. 이미지는 설계도, 컨테이너는 그 설계도로 띄운 실행 중인 프로세스. pull은 설계도만 받는 단계라는 게 이 두 줄로 보입니다.">
+    <h2>pull 도는 동안: 이미지와 컨테이너는 다르다</h2>
+    <div class="cols">
+      <div>
+        <p style="margin-bottom:14px"><b>예습 답 맞추기.</b> 컨테이너와 VM의 차이를 한 문장으로, 돌아가면서 발표.</p>
+        <p style="margin-bottom:14px"><b>실물 확인.</b> tmux 새 창에서 두 명령을 번갈아 쳐 봅니다.</p>
+        <p class="muted">이미지는 계속 늘어나는데 컨테이너는 0개. pull은 설계도만 받는 단계입니다.</p>
+      </div>
+<pre class="term"><span class="c"># 새 창: Ctrl+b 누른 뒤 c
+# 창 전환: Ctrl+b 누른 뒤 n</span>
+
+<span class="p">$</span> docker images | wc -l
+<span class="c">  → 계속 늘어남</span>
+
+<span class="p">$</span> docker ps
+<span class="c">  → 여전히 빈 표</span></pre>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" data-stage="pull" data-time="22:16"
+    data-notes="2회차 컴포넌트 표 기억나죠? pull 로그에 지나가는 이미지 이름을 그 표랑 짝지어 봅시다. 표에 없는 이름 발견한 사람? mariadb, rabbitmq, memcached. OpenStack 컴포넌트는 아니지만 장부, 메신저, 캐시 역할이라 없으면 아무것도 안 돌아갑니다. 그리고 haproxy는 안 보이는 게 정상이에요. 우리 AIO 구성에서 꺼둔 겁니다. 왜 꺼뒀는지 globals.yml에서 찾아볼 사람?">
+    <h2>pull 로그와 2회차 컴포넌트 표 짝짓기</h2>
+    <table>
+      <thead><tr><th style="width:28%">2회차 표</th><th style="width:38%">로그에 보이는 이미지</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td>Keystone</td><td><code>keystone</code></td><td>인증, 모든 서비스의 출입증</td></tr>
+        <tr><td>Glance</td><td><code>glance-api</code></td><td>VM 디스크 이미지 보관</td></tr>
+        <tr><td>Nova</td><td><code>nova-api</code> <code>nova-scheduler</code> <code>nova-conductor</code> <code>nova-compute</code></td><td>VM 생성과 배치</td></tr>
+        <tr><td>Neutron</td><td><code>neutron-server</code> <code>openvswitch</code> 계열</td><td>네트워크</td></tr>
+        <tr class="extra"><td>표에 없음</td><td><code>mariadb</code> <code>rabbitmq</code> <code>memcached</code></td><td>장부, 메신저, 캐시</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:22px"><code>haproxy</code>는 안 보이는 게 정상입니다. 우리 AIO 구성에서는 꺼 두었습니다.</p>
+  </section>
+
+
+  <!-- init A -->
+  <section class="slide" data-stage="preview" data-time="22:18"
+    data-notes="pull 도는 동안 6회차에 돌릴 init.sh를 미리 뜯어봅시다. setup.sh랑 짝이에요. setup.sh는 deploy 전에 호스트를, init.sh는 deploy 후에 OpenStack 안쪽을 준비합니다. 그럼 왜 하나로 안 합쳤을까요? init.sh가 쓰는 세 가지가 deploy 전에는 아예 존재하지 않기 때문입니다. br-ex는 openvswitch 컨테이너가 만들고, admin-openrc.sh는 post-deploy가 만들고, openstack 명령은 keystone이랑 neutron 컨테이너가 떠 있어야 대답합니다. 지금 여러분 VM에서 ip link show br-ex 쳐보면 없다고 나올 거예요.">
+    <h2>init.sh는 setup.sh의 짝이다</h2>
+    <div class="vs">
+      <div class="h"></div><div class="h">setup.sh (4회차)</div><div class="h ini">init.sh (6회차)</div>
+      <div class="l">언제</div><div>deploy 전</div><div class="ini">deploy 후, 1~2분</div>
+      <div class="l">무엇을</div><div>호스트. kolla가 가정하는 것들</div><div class="ini">OpenStack 안쪽. VM을 띄울 재료</div>
+      <div class="l">끝 표시</div><div>READY ✅</div><div class="ini">INIT ✅</div>
+    </div>
+    <p style="margin-top:26px">하나로 못 합치는 이유: init.sh가 쓰는 세 가지는 deploy 전에는 아직 없습니다.</p>
+    <div class="need">
+      <div><b>br-ex</b>openvswitch 컨테이너가 뜨면서 만든다</div>
+      <div><b>admin-openrc.sh</b>post-deploy가 만든다</div>
+      <div><b>openstack 명령</b>keystone, neutron 컨테이너가 떠야 대답한다</div>
+    </div>
+  </section>
+
+  <!-- init B -->
+  <section class="slide" data-stage="preview" data-time="22:20"
+    data-notes="init.sh는 네 단계입니다. 첫 단계는 확인부터. 컨테이너 다섯 개가 떠 있는지, br-ex가 있는지 보고, 없으면 바로 멈춥니다. deploy 덜 끝난 상태로 돌리면 이상한 데서 죽지 않고 여기서 친절하게 멈추게 한 거예요. 그다음 post-deploy. admin-openrc.sh를 만드는데, 이게 keystone 주소와 admin 계정 정보가 들어 있는 파일입니다. 이걸 source해야 openstack 명령이 인증을 받습니다. 2회차 표현으로 하면 출입증이요.">
+    <div class="step">[1/4] deploy 확인 + post-deploy</div>
+    <h2>먼저 deploy가 진짜 끝났는지 본다</h2>
+    <div class="cols">
+<pre class="term" style="font-size:16px"><span class="c"># 핵심 컨테이너 다섯 개가 없으면 즉시 중단</span>
+for c in nova_compute neutron_server \
+         neutron_l3_agent openvswitch_vswitchd keystone
+  docker ps ... | grep -qx "$c" || <span class="k">die</span>
+
+ip link show br-ex || <span class="k">die</span>   <span class="c"># br-ex도 확인</span>
+
+<span class="c"># 접속 정보 파일이 없을 때만</span>
+kolla-ansible <span class="k">post-deploy</span> -i /etc/kolla/all-in-one</pre>
+      <div>
+        <p style="margin-bottom:16px">deploy가 덜 끝났으면 엉뚱한 곳에서 죽지 않고 <b>여기서 이유를 말하고 멈춥니다.</b></p>
+        <p><code>post-deploy</code>는 <code>/etc/kolla/admin-openrc.sh</code>를 만듭니다. keystone 주소와 admin 계정이 들어 있고, 이걸 <code>source</code>해야 <code>openstack</code> 명령이 인증됩니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- init C -->
+  <section class="slide" data-stage="preview" data-time="22:22"
+    data-notes="두 번째 단계가 제일 중요합니다. 지난주 네 박자로 가볼게요. 필요한 것: FIP가 속할 외부 네트워크, 그리고 그 네트워크의 게이트웨이. 우리 환경: 가비아 VM에는 그런 외부망이 없어요. 그래서 호스트 안에 192.168.200.0/24라는 가짜 외부망을 만들고 호스트가 직접 게이트웨이 노릇을 합니다. init.sh가 하는 일: br-ex에 .1을 붙이고, 이 대역에서 나가는 패킷을 eth0 주소로 바꿔서 내보내고, 포워딩을 열어줍니다. 전부 systemd 유닛이라 재부팅해도 살아남아요. 안 하면: 인스턴스는 떠도 인터넷을 못 나가고, 호스트에서 FIP로 ping이 안 갑니다. 그리고 왜 setup.sh에서 안 했냐, SU Cloud 함정 7번입니다. 그때는 br-ex가 없어서 IP를 줄 대상이 없어요.">
+    <div class="step">[2/4] br-ex-gw.service</div>
+    <h2>호스트가 가짜 외부망의 게이트웨이가 된다</h2>
+    <div class="beat">
+      <div class="l">필요한 것</div><div>Floating IP가 속할 외부 네트워크와, 그 네트워크의 게이트웨이.</div>
+      <div class="l">우리 환경</div><div>가비아 VM에는 그런 외부망이 없다. 그래서 호스트 안에 <code>192.168.200.0/24</code>를 만들고 호스트가 직접 게이트웨이를 맡는다.</div>
+      <div class="l">init.sh가 한 일</div><div><code>br-ex</code>에 <code>192.168.200.1</code> 부여, 이 대역에서 나가는 패킷을 eth0 주소로 바꾸는 <code>MASQUERADE</code>, <code>FORWARD ACCEPT</code>. 전부 systemd 유닛이라 재부팅에도 살아남는다.</div>
+      <div class="l bad">안 하면</div><div class="bad">인스턴스는 떠도 인터넷에 못 나가고, 호스트에서 FIP로 ping이 안 간다.</div>
+    </div>
+    <p class="note tip" style="margin-top:18px">왜 setup.sh에서 안 했나: 그때는 <code>br-ex</code>가 없어서 IP를 붙일 대상이 없다. 그래서 유닛도 br-ex가 생길 때까지 최대 2분 기다린다. (SU Cloud 함정 7)</p>
+  </section>
+
+  <!-- init D -->
+  <section class="slide" data-stage="preview" data-time="22:24"
+    data-notes="그림으로 보면 이렇습니다. 지난주 다이어그램 2페이지, 배포 후 미리보기랑 같은 그림이에요. 노란 선이 경로 A, 인스턴스가 인터넷 나가는 길. 인스턴스 10.10.10.x에서 출발해서 라우터가 .2로 한 번 바꾸고, br-ex의 .1을 거쳐서 호스트가 eth0 주소로 한 번 더 바꿔서 나갑니다. 주소를 두 번 바꾸는 거예요. 점선이 경로 B, 호스트에서 FIP로 들어가는 길. 호스트는 br-ex에 .1이 있으니까 같은 대역인 FIP로 바로 가고, 라우터가 FIP를 인스턴스 주소로 바꿔줍니다. 이쪽은 MASQUERADE를 안 거쳐요. 6회차에 ssh cirros@FIP 하는 게 이 경로입니다.">
+    <h2>6회차에 완성될 길</h2>
+    <svg class="fig" viewBox="0 0 1168 396" role="img" aria-label="인스턴스에서 인터넷까지, 호스트에서 FIP까지의 경로">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#17212b"/></marker>
+        <marker id="ahy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c99600"/></marker>
+      </defs>
+      <style>
+        .bx{fill:#fff;stroke:#17212b;stroke-width:2}
+        .bxh{fill:#fff3c4;stroke:#17212b;stroke-width:2}
+        .t1{font:700 18px 'IBM Plex Sans KR',sans-serif;fill:#17212b}
+        .t2{font:500 15px 'JetBrains Mono',monospace;fill:#17212b}
+        .t3{font:400 14px 'IBM Plex Sans KR',sans-serif;fill:#5a6773}
+        .ln{stroke:#17212b;stroke-width:2}
+      </style>
+      <!-- host frame -->
+      <rect x="178" y="40" width="986" height="350" fill="none" stroke="#cdd5dc" stroke-width="2" stroke-dasharray="6 5" rx="4"/>
+      <text x="196" y="64" class="t3">가비아 VM (호스트)</text>
+      <!-- internet -->
+      <rect x="10" y="150" width="140" height="90" class="bx" rx="3"/>
+      <text x="80" y="190" text-anchor="middle" class="t1">인터넷</text>
+      <text x="80" y="214" text-anchor="middle" class="t3">가비아 NAT 너머</text>
+      <!-- eth0 -->
+      <rect x="210" y="140" width="190" height="110" class="bx" rx="3"/>
+      <text x="305" y="175" text-anchor="middle" class="t1">eth0</text>
+      <text x="305" y="200" text-anchor="middle" class="t2">MASQUERADE</text>
+      <text x="305" y="224" text-anchor="middle" class="t3">eth0 주소로 바꿔 내보냄</text>
+      <!-- br-ex -->
+      <rect x="440" y="140" width="190" height="110" class="bxh" rx="3"/>
+      <text x="535" y="175" text-anchor="middle" class="t1">br-ex</text>
+      <text x="535" y="200" text-anchor="middle" class="t2">192.168.200.1</text>
+      <text x="535" y="224" text-anchor="middle" class="t3">init.sh가 붙인 게이트웨이</text>
+      <!-- qrouter -->
+      <rect x="690" y="140" width="220" height="110" class="bx" rx="3"/>
+      <text x="800" y="172" text-anchor="middle" class="t1">tenant_router</text>
+      <text x="800" y="197" text-anchor="middle" class="t2">외부 .2 / 내부 .1</text>
+      <text x="800" y="221" text-anchor="middle" class="t3">SNAT, FIP↔인스턴스 DNAT</text>
+      <!-- instance -->
+      <rect x="990" y="140" width="168" height="110" class="bx" rx="3"/>
+      <text x="1074" y="172" text-anchor="middle" class="t1">cirros</text>
+      <text x="1074" y="197" text-anchor="middle" class="t2">10.10.10.x</text>
+      <text x="1074" y="221" text-anchor="middle" class="t3">FIP .101~.150</text>
+      <!-- links -->
+      <line x1="150" y1="195" x2="210" y2="195" class="ln"/>
+      <line x1="400" y1="195" x2="440" y2="195" class="ln"/>
+      <line x1="630" y1="195" x2="690" y2="195" class="ln"/>
+      <line x1="910" y1="195" x2="990" y2="195" class="ln"/>
+      <text x="660" y="275" text-anchor="middle" class="t2" style="font-size:13px">provider_network</text>
+      <text x="660" y="292" text-anchor="middle" class="t3">192.168.200.0/24</text>
+      <text x="950" y="275" text-anchor="middle" class="t2" style="font-size:13px">tenant_network</text>
+      <text x="950" y="292" text-anchor="middle" class="t3">10.10.10.0/24</text>
+      <!-- path A -->
+      <path d="M1074,140 L1074,105 L80,105 L80,150" fill="none" stroke="#c99600" stroke-width="4" marker-end="url(#ahy)"/>
+      <text x="600" y="94" text-anchor="middle" class="t1" style="font-size:16px;fill:#8a6800">경로 A: 인스턴스 → 인터넷 (주소를 라우터에서 한 번, eth0에서 한 번 바꿈)</text>
+      <!-- path B -->
+      <path d="M535,250 L535,330 L1074,330 L1074,250" fill="none" stroke="#17212b" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#ah)"/>
+      <text x="805" y="370" text-anchor="middle" class="t1" style="font-size:16px">경로 B: 호스트 → FIP (MASQUERADE 안 거침, 6회차 ssh cirros@FIP)</text>
+    </svg>
+  </section>
+
+  <!-- init E -->
+  <section class="slide" data-stage="preview" data-time="22:26"
+    data-notes="세 번째 단계, VM을 띄울 재료입니다. 값보다 오른쪽 칸, 왜 이 값인지가 중요해요. 외부 네트워크는 DHCP를 끄고 게이트웨이를 방금 본 .1로. FIP는 101번부터 150번까지만. 라우터 외부 IP를 .2로 박아둔 건 SU Cloud 함정 6번이에요. 안 박으면 라우터가 FIP 풀에서 하나를 가져가 버립니다. tenant 서브넷에 DNS 넣은 건 함정 9번, 안 넣으면 인스턴스가 도메인을 못 풉니다. 보안그룹은 기본값이 들어오는 걸 전부 막아서, ping이랑 ssh를 열어줘야 6회차 목표가 됩니다.">
+    <div class="step">[3/4] OpenStack 리소스</div>
+    <h2>VM을 띄울 재료를 만든다</h2>
+    <table>
+      <thead><tr><th style="width:22%">만드는 것</th><th style="width:34%">값</th><th>왜 이 값인가</th></tr></thead>
+      <tbody>
+        <tr><td><code>provider_network</code></td><td>flat, physnet1, DHCP 없음, 게이트웨이 .1</td><td>br-ex에 연결된 외부망. 게이트웨이는 init.sh가 붙인 호스트 주소</td></tr>
+        <tr><td>FIP 풀</td><td><code>.101 ~ .150</code></td><td>.1(호스트)과 .2(라우터)는 풀 밖에 둔다</td></tr>
+        <tr class="extra"><td><code>tenant_router</code></td><td>외부 IP <code>.2</code> 고정</td><td>안 박으면 FIP 풀에서 하나를 가져간다 (SU Cloud 함정 6)</td></tr>
+        <tr class="extra"><td><code>tenant_network</code></td><td><code>10.10.10.0/24</code>, DNS 8.8.8.8</td><td>DNS를 안 주면 인스턴스가 도메인을 못 푼다 (함정 9)</td></tr>
+        <tr><td>이미지, 플레이버</td><td>cirros 0.6.3, m1.tiny 1 vCPU/512MB/1GB</td><td>8GB 호스트에서도 인스턴스 2대까지</td></tr>
+        <tr><td>default 보안그룹</td><td>ICMP, TCP 22 허용</td><td>기본값은 들어오는 트래픽을 전부 막는다. ping과 ssh를 위해 연다</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- init F -->
+  <section class="slide" data-stage="preview" data-time="22:28"
+    data-notes="마지막으로 이 스크립트를 몇 번 돌려도 안전하게 만든 방법입니다. 패턴은 하나예요. 먼저 있는지 확인하고, 없을 때만 만든다. openstack 리소스는 show로, iptables는 -C로, IP는 grep으로 확인합니다. 그래서 중간에 실패해도 고치고 다시 돌리면 됩니다. 이따 deploy도 똑같이 재실행 안전하다고 할 텐데, kolla가 안에서 같은 원리를 씁니다. 끝나면 INIT 체크 표시와 Horizon 접속 정보가 뜨고, 그 화면이 6회차 인증입니다.">
+    <div class="step">[4/4] INIT ✅</div>
+    <h2>몇 번을 돌려도 안전하게</h2>
+    <div class="cols">
+      <div>
+        <p style="margin-bottom:14px">패턴은 하나입니다. <b>있는지 먼저 보고, 없을 때만 만든다.</b> 그래서 중간에 실패해도 원인을 고치고 다시 돌리면 됩니다.</p>
+        <p class="muted">끝나면 <code>INIT ✅</code>와 Horizon 접속 정보가 뜹니다. 이 화면이 6회차 인증입니다.</p>
+      </div>
+<pre class="term" style="font-size:16px"><span class="c"># OpenStack 리소스: show로 확인</span>
+exists network provider_network \
+  || openstack network create ...
+
+<span class="c"># iptables: -C로 확인, 없을 때만 -A</span>
+iptables -t nat <span class="k">-C</span> POSTROUTING ... \
+  || iptables -t nat <span class="k">-A</span> POSTROUTING ...
+
+<span class="c"># IP: grep으로 확인</span>
+ip addr show dev br-ex | grep -q .1/ \
+  || ip addr add 192.168.200.1/24 dev br-ex</pre>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide" data-stage="deploy" data-time="22:30"
+    data-notes="pull 끝났으면 세 번째 명령, deploy. 여기서 제일 중요한 것. 지난주 prechecks 명령에 --use-test-images가 붙어 있었죠. 그거 보고 따라 치면 unrecognized arguments로 바로 죽습니다. deploy에는 플래그 없어요. 30분에서 60분 걸리니까 오늘 안 끝나는 게 정상이고, 초반 5분 동안 빨간 에러 없이 흐르는지만 다 같이 확인합니다.">
+    <div class="cp">체크포인트 2</div>
+    <h2>세 번째 줄: 본 배포</h2>
+<pre class="term"><span class="c">(kolla-venv)</span> <span class="p">$</span> <span class="k">kolla-ansible deploy -i /etc/kolla/all-in-one</span></pre>
+    <p class="note warn" style="margin-top:22px"><b>플래그 없이 칩니다.</b> <code>--use-test-images</code>는 prechecks 전용이라 deploy에 붙이면 <code>unrecognized arguments</code>로 바로 죽습니다. 지난주 명령을 보고 따라 치지 마세요.</p>
+    <ul class="plain" style="margin-top:22px">
+      <li>30~60분 걸립니다. 세션 안에 안 끝나는 게 정상입니다.</li>
+      <li>초반 5분, 빨간 <code>fatal</code> 없이 로그가 흐르는지만 전원 확인합니다.</li>
+    </ul>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide" data-stage="deploy" data-time="22:33"
+    data-notes="기다리는 동안 deploy가 뭘 하는지 봅시다. 로그에 TASK 대괄호 keystone 콜론 이런 게 지나가죠. 순서가 있어요. 먼저 로그 수집 같은 공용 기반, 그다음 장부 메신저 캐시, 그다음 keystone, 그다음 나머지. keystone이 나머지보다 먼저인 이유는 2회차에서 배운 대로 모든 서비스가 keystone에 자기를 등록하고 인증받기 때문입니다. 그리고 서비스마다 같은 패턴이 반복돼요. 설정 파일 만들고, DB랑 계정 만들고, 컨테이너 띄우고, 살아 있는지 확인. 새 창에서 watch 걸어두면 숫자 올라가는 게 보입니다.">
+    <h2>deploy가 실제로 하는 일</h2>
+    <div class="flow">
+      <div><b>공용 기반</b>로그 수집, 크론, 관리 도구</div>
+      <div><b>장부, 메신저, 캐시</b>mariadb, rabbitmq, memcached</div>
+      <div class="key"><b>keystone</b>모든 서비스의 출입증</div>
+      <div><b>나머지 서비스</b>glance, placement, nova, neutron…</div>
+    </div>
+    <p style="margin-bottom:12px">서비스마다 같은 네 박자가 반복됩니다. 로그의 <code>TASK [keystone : ...]</code>가 그 흔적입니다.</p>
+    <div class="cycle"><span>설정 파일 생성</span><i>→</i><span>DB와 keystone 계정 준비</span><i>→</i><span>컨테이너 기동</span><i>→</i><span>살아 있는지 확인</span></div>
+<pre class="term" style="margin-top:24px"><span class="c"># tmux 새 창에서 걸어두면 숫자가 올라가는 게 보입니다</span>
+<span class="p">$</span> watch -n5 'docker ps -q | wc -l'</pre>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-stage="deploy" data-time="22:40"
+    data-notes="초반 로그 다 정상이죠? 이제 tmux에서 빠져나옵니다. Ctrl+b 누르고 손 떼고 d. detached라고 뜨면 성공. 이 상태로 SSH 끊고 노트북 닫아도 서버에서는 deploy가 계속 돕니다. 다시 보고 싶으면 tmux attach -t kolla. 잘 자요, deploy는 밤새 알아서 끝납니다.">
+    <h2>tmux에 걸어둔 채 해산</h2>
+    <div class="cols">
+<pre class="term"><span class="c"># 빠져나오기 (작업은 계속 돈다)</span>
+<span class="k">Ctrl+b</span> 누르고 손 뗀 뒤 <span class="k">d</span>
+<span class="c">[detached (from session kolla)]</span>
+
+<span class="c"># 나중에 다시 보기</span>
+<span class="p">$</span> <span class="k">tmux attach -t kolla</span></pre>
+      <div>
+        <p style="margin-bottom:16px"><code>detached</code>가 뜨면 SSH를 끊고 노트북을 닫아도 됩니다. deploy는 서버에서 계속 돌아갑니다.</p>
+        <p style="font-size:28px;font-weight:700;margin-top:30px;line-height:1.4">잘 자요.<br>deploy는 밤새 알아서 끝납니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide" data-stage="deploy" data-time="22:42"
+    data-notes="주중에 할 것. tmux attach 해서 마지막에 PLAY RECAP, failed 0이면 성공. 그다음 docker ps 명령으로 컨테이너가 전부 Up인 화면을 캡처해서 6회차 전까지 톡방에 인증. 그리고 단톡방 토론 질문 두 개 던져둘게요. nova는 왜 네 개로 쪼개져 있나, mariadb랑 rabbitmq는 OpenStack이 아닌데 왜 있나. 로그 위치도 한 번 봐두세요. 7회차에 여기를 팝니다.">
+    <h2>주중에 각자: 완료 확인하고 인증</h2>
+    <div class="cols">
+      <div>
+        <p style="margin-bottom:10px"><b>1. 완료 확인.</b> <code>tmux attach -t kolla</code>로 들어가서 마지막 <code>PLAY RECAP</code>의 <code>failed=0</code>.</p>
+        <p style="margin-bottom:10px"><b>2. 인증 스크린샷.</b> 전부 <code>Up</code>인 화면을 6회차 전까지 톡방에.</p>
+<pre class="term" style="font-size:16px">docker ps --format 'table {{.Names}}\t{{.Status}}' | sort</pre>
+        <p style="margin-top:12px"><b>3. 로그 위치 봐두기.</b> <code>sudo ls /var/log/kolla/</code> <span class="muted">7회차에 여기를 팝니다.</span></p>
+      </div>
+      <div>
+        <p style="margin-bottom:12px"><b>단톡방 토론</b></p>
+        <ul class="plain">
+          <li>nova가 <code>nova_api</code> <code>nova_scheduler</code> <code>nova_conductor</code> <code>nova_compute</code>로 쪼개져 있는 이유는? <span class="muted">힌트: 3회차 6단계에서 각각 다른 단계를 맡았다.</span></li>
+          <li>mariadb와 rabbitmq는 OpenStack 컴포넌트가 아닌데 왜 있을까?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide" data-stage="deploy" data-time="22:45"
+    data-notes="막히면 이 표부터 보세요. 공통 원칙은 두 개입니다. pull이랑 deploy는 멱등이라 다시 돌려도 안전하다. 그리고 에러는 마지막 30줄을 캡처해서 톡방에. 해결한 건 GitHub Issue에 증상, 시도, 해결로 남겨주세요. 쌓인 Issue가 나중에 발표 자료가 됩니다.">
+    <h2>막혔을 때</h2>
+    <table>
+      <thead><tr><th style="width:26%">증상</th><th>할 일</th></tr></thead>
+      <tbody>
+        <tr><td>pull 타임아웃</td><td>같은 명령 재실행. 받은 이미지는 건너뜁니다.</td></tr>
+        <tr><td>deploy 중간 실패</td><td><code>PLAY RECAP</code>에서 실패한 role 확인, 에러 마지막 30줄 캡처해 톡방, 원인 해결 후 <code>deploy</code> 재실행.</td></tr>
+        <tr><td>메모리 부족</td><td><code>free -h</code>와 <code>swapon --show</code> 결과를 캡처해 톡방. setup.sh가 스왑을 이미 잡아 두었으니 임의로 추가하지 말 것.</td></tr>
+        <tr><td>SSH 끊김</td><td>겁먹지 말 것. <code>tmux attach -t kolla</code>로 복귀.</td></tr>
+        <tr><td>일부 컨테이너 Restarting</td><td><code>docker logs &lt;이름&gt; --tail 50</code> 캡처해 톡방.</td></tr>
+        <tr><td>docker.sock permission denied</td><td>docker 그룹 미반영. <code>exit</code> 후 재접속하고 같은 명령 다시.</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:16px;font-size:17px">해결한 문제는 GitHub Issue에 증상, 시도, 해결로 기록합니다. 쌓인 Issue가 발표 자료가 됩니다.</p>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide" data-stage="post-deploy" data-time="22:48"
+    data-notes="다음 회차 예고. 오늘 끝나면 컨테이너는 다 떠 있지만 아직 VM은 하나도 못 띄웁니다. 접속 정보도, 네트워크도, 이미지도 없거든요. 6회차에 post-deploy와 init.sh로 그걸 만들고 cirros에 SSH까지 갑니다. 개천절 대체공휴일 때문에 10월 6일 화요일로 옮겨졌어요. 그 전까지 docker ps 인증 잊지 마세요.">
+    <div class="title-wrap">
+      <div class="title-meta">다음 회차, 6회차는 10/6(화)</div>
+      <h1 style="font-size:52px">컨테이너는 다 떴지만,<br>아직 VM은 하나도 못 띄운다</h1>
+      <p class="title-sub">post-deploy와 init.sh로 접속 정보, 네트워크, 이미지를 준비하고 cirros에 SSH까지 갑니다.</p>
+      <p class="note" style="margin-top:34px;max-width:34em">그 전까지 할 일은 하나. deploy 완료 후 <code>docker ps</code> 스크린샷 인증.</p>
+    </div>
+  </section>
+
+  <div id="foot"><span>CloudClub 10기 오픈스택 스터디 5회차</span><span><span id="clock"></span>&nbsp;&nbsp;&nbsp;<span id="count"></span></span></div>
+</div></div>
+
+<div id="notes" aria-live="polite"><h4>대본</h4><div id="notesText"></div></div>
+
+<script>
+(function(){
+  const STAGES=[
+    {id:"install-deps",label:"install-deps",wk:"4회차"},
+    {id:"bootstrap",label:"bootstrap-servers",wk:""},
+    {id:"prechecks",label:"prechecks",wk:""},
+    {id:"pull",label:"pull",wk:"오늘"},
+    {id:"deploy",label:"deploy",wk:""},
+    {id:"post-deploy",label:"post-deploy",wk:"6회차"}
+  ];
+  const rail=document.getElementById('rail');
+  STAGES.forEach(s=>{
+    const d=document.createElement('div');d.className='box';d.dataset.id=s.id;
+    d.innerHTML=(s.wk?'<small>'+s.wk+'</small>':'')+s.label;rail.appendChild(d);
+  });
+  const boxes=[...rail.children];
+  const slides=[...document.querySelectorAll('.slide')];
+  const clock=document.getElementById('clock'),count=document.getElementById('count');
+  const notes=document.getElementById('notes'),notesText=document.getElementById('notesText');
+  let i=0;
+
+  function paintRail(stage){
+    const cur=STAGES.findIndex(s=>s.id===stage);
+    boxes.forEach((b,k)=>{
+      b.className='box';
+      if(k<3) b.classList.add('done');
+      if(stage==='preview'){ if(k===3) b.classList.add('now'); if(k===4) b.classList.add('later'); if(k===5) b.classList.add('today'); return; }
+      if(stage==='today'){ if(k===3||k===4) b.classList.add('today'); if(k===5) b.classList.add('later'); return; }
+      if(k===cur && k>=3) b.classList.add('now');
+      else if(k>cur && k>=3) b.classList.add('later');
+      else if(k>=3 && k<cur) b.classList.add('done');
+    });
+  }
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('on',k===i));
+    const s=slides[i];
+    paintRail(s.dataset.stage);
+    clock.textContent=s.dataset.time||'';
+    count.textContent=(i+1)+' / '+slides.length;
+    notesText.textContent=s.dataset.notes||'';
+    history.replaceState(null,'','#'+(i+1));
+  }
+  function fit(){
+    const sc=Math.min(window.innerWidth/1280,window.innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+sc+')';
+  }
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(i+1)}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(i-1)}
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+    else if(e.key==='n'||e.key==='N')notes.classList.toggle('show');
+    else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}
+  });
+  document.getElementById('prev').onclick=()=>show(i-1);
+  document.getElementById('next').onclick=()=>show(i+1);
+  window.addEventListener('resize',fit);
+  fit();
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>

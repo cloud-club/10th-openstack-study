@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6회차 INIT, 그리고 SSH | CloudClub 10기 오픈스택 스터디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --outer:#dfe5ea;
+  --paper:#f5f7f9;
+  --ink:#17212b;
+  --muted:#5a6773;
+  --rule:#cdd5dc;
+  --yellow:#f2b705;
+  --yellow-soft:#fff3c4;
+  --teal:#0f7b80;
+  --teal-soft:#d9eeee;
+  --red:#c2372c;
+  --red-soft:#fbe4e1;
+  --term:#16212c;
+  --term-ink:#d9e2e9;
+  --term-dim:#7d8c99;
+  --term-hi:#7fc9cc;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--outer);font-family:var(--sans);color:var(--ink);overflow:hidden}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{width:1280px;height:720px;background:var(--paper);position:relative;transform-origin:center center;box-shadow:0 2px 0 var(--rule)}
+
+/* ---------- pipeline rail (the one bold element) ---------- */
+#rail{position:absolute;top:28px;left:56px;right:56px;display:flex;gap:10px;align-items:flex-end}
+.box{flex:1;height:40px;border:2px solid var(--rule);border-radius:3px;position:relative;
+  display:flex;align-items:center;justify-content:center;font:600 13px var(--mono);color:var(--muted);
+  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.04) 9px 11px);transition:all .35s ease}
+.box small{position:absolute;top:-19px;left:0;font:500 11px var(--sans);color:var(--muted);letter-spacing:.02em}
+.box.done{border-color:var(--teal);background:repeating-linear-gradient(90deg,var(--teal-soft) 0 9px,#c8e4e5 9px 11px);color:var(--teal)}
+.box.done::after{content:"✓";position:absolute;right:8px;font-size:13px}
+.box.today{border-color:var(--ink);border-style:dashed;color:var(--ink)}
+.box.now{border:2px solid var(--ink);background:repeating-linear-gradient(90deg,var(--yellow) 0 9px,#e0a800 9px 11px);color:var(--ink);height:52px}
+.box.later{opacity:.55}
+
+/* ---------- slides ---------- */
+.slide{position:absolute;inset:108px 56px 64px 56px;display:none;flex-direction:column}
+.slide.on{display:flex}
+h1{font-size:64px;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+h2{font-size:38px;font-weight:700;line-height:1.2;letter-spacing:-.01em;margin-bottom:22px}
+.lead{font-size:22px;color:var(--muted);line-height:1.6;max-width:30em}
+p,li{font-size:21px;line-height:1.6}
+ul{list-style:none}
+ul.plain li{padding-left:22px;position:relative;margin-bottom:8px}
+ul.plain li::before{content:"";position:absolute;left:2px;top:.72em;width:8px;height:8px;background:var(--ink)}
+code{font-family:var(--mono);font-size:.88em;background:#e6ebef;padding:1px 6px;border-radius:3px}
+.cols{display:grid;gap:36px;grid-template-columns:1fr 1fr;align-items:start}
+.cols3{display:grid;gap:24px;grid-template-columns:repeat(3,1fr)}
+.muted{color:var(--muted)}
+
+pre.term{background:var(--term);color:var(--term-ink);font:400 19px/1.65 var(--mono);padding:20px 24px;border-radius:4px;overflow-x:auto;white-space:pre}
+pre.term .c{color:var(--term-dim)}
+pre.term .p{color:var(--term-hi)}
+pre.term .k{color:var(--yellow);font-weight:600}
+
+.note{border-left:5px solid var(--ink);padding:10px 0 10px 18px;font-size:19px;line-height:1.6}
+.note.warn{border-color:var(--red);background:var(--red-soft);padding:14px 18px}
+.note.tip{border-color:var(--teal)}
+.cp{display:inline-flex;align-items:center;gap:10px;background:var(--yellow);font-weight:700;font-size:17px;padding:5px 14px 5px 10px;border-radius:3px;align-self:flex-start;margin-bottom:14px}
+.cp::before{content:"";width:12px;height:12px;border:2px solid var(--ink);border-radius:2px}
+
+/* title slide */
+.title-wrap{margin-top:auto;margin-bottom:auto}
+.title-meta{font-size:22px;color:var(--muted);margin-bottom:26px}
+.title-sub{font-size:26px;margin-top:26px;line-height:1.55;max-width:26em}
+.three{display:flex;gap:14px;margin-top:40px}
+.three div{font:600 19px var(--mono);border:2px solid var(--ink);padding:10px 16px;border-radius:3px}
+
+/* week columns */
+.wk{border-top:6px solid var(--rule);padding-top:14px}
+.wk h3{font-size:22px;margin-bottom:8px}
+.wk .d{font-size:15px;color:var(--muted);margin-bottom:10px}
+.wk.done{border-color:var(--teal)}
+.wk.now{border-color:var(--yellow)}
+.wk p{font-size:18px}
+
+/* timeline */
+.tl{display:grid;grid-template-columns:110px 1fr;row-gap:0;margin-top:6px}
+.tl .t{font:600 20px var(--mono);padding:14px 0;border-top:1px solid var(--rule)}
+.tl .e{font-size:20px;padding:14px 0;border-top:1px solid var(--rule);line-height:1.5}
+.tl .e b{display:inline-block;min-width:4.5em}
+.tl .e span{color:var(--muted);font-size:17px}
+.tl .hl{background:var(--yellow-soft)}
+
+/* table */
+table{border-collapse:collapse;width:100%;font-size:18px}
+th{text-align:left;font-weight:700;padding:9px 12px;border-bottom:2px solid var(--ink)}
+td{padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.5}
+td code{font-size:15px}
+tr.extra td{background:var(--yellow-soft)}
+
+/* order diagram */
+.flow{display:flex;align-items:stretch;gap:0;margin:8px 0 24px}
+.flow div{flex:1;border:2px solid var(--ink);padding:14px 14px;font-size:17px;line-height:1.5;margin-right:-2px;background:#fff}
+.flow div b{display:block;font-size:19px;margin-bottom:4px}
+.flow div.key{background:var(--yellow)}
+.cycle{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:18px}
+.cycle span{border:1.5px solid var(--rule);padding:6px 12px;border-radius:20px;background:#fff}
+.cycle i{font-style:normal;color:var(--muted)}
+
+
+/* init.sh slides */
+.vs{display:grid;grid-template-columns:150px 1fr 1fr;font-size:19px}
+.vs div{padding:11px 14px;border-bottom:1px solid var(--rule);line-height:1.5}
+.vs .h{font-weight:700;border-bottom:2px solid var(--ink)}
+.vs .l{color:var(--muted)}
+.vs .ini{background:var(--yellow-soft)}
+.need{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:14px}
+.need div{border:2px solid var(--ink);margin-right:-2px;padding:12px 14px;font-size:17px;line-height:1.5;background:#fff}
+.need b{display:block;font:600 17px var(--mono);margin-bottom:2px}
+.beat{display:grid;grid-template-columns:170px 1fr;font-size:19px}
+.beat div{padding:10px 0;border-top:1px solid var(--rule);line-height:1.55}
+.beat .l{font-weight:700;padding-right:12px}
+.beat .bad{color:var(--red)}
+.fig{width:100%;height:auto;display:block}
+.goal{font:700 64px var(--mono);letter-spacing:-.02em;margin:18px 0 6px}
+.goal span{background:var(--yellow);padding:0 12px}
+.six{display:grid;grid-template-columns:44px 150px 1fr 200px;font-size:18px}
+.six div{padding:9px 10px;border-bottom:1px solid var(--rule);line-height:1.45}
+.six .h{font-weight:700;border-bottom:2px solid var(--ink)}
+.six .n{font:600 18px var(--mono);color:var(--muted)}
+.six .st{font:500 15px var(--mono);color:var(--teal)}
+.six .slow{background:var(--yellow-soft)}
+.step{font:600 15px var(--mono);color:var(--muted);margin-bottom:6px}
+
+/* chrome */
+#foot{position:absolute;left:56px;right:56px;bottom:22px;display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+#clock{font:600 14px var(--mono);color:var(--ink)}
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#1f2a35;color:#e8eef3;
+  font:17px/1.7 var(--sans);padding:18px 28px 22px;transform:translateY(100%);transition:transform .25s ease;z-index:10}
+#notes.show{transform:none}
+#notes h4{font-size:13px;color:#9fb0bf;font-weight:500;margin-bottom:6px}
+#hint{position:fixed;right:14px;top:10px;font-size:12px;color:#6b7884;z-index:5}
+.navbtn{position:fixed;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:transparent;font-size:28px;color:#8a97a3;cursor:pointer;z-index:5}
+.navbtn:hover,.navbtn:focus-visible{color:var(--ink);outline:2px solid var(--ink)}
+#prev{left:6px}#next{right:6px}
+@media (prefers-reduced-motion:reduce){.box,#notes{transition:none}}
+</style>
+<body>
+<div id="hint">← → 이동 · N 대본 · F 전체화면</div>
+<button class="navbtn" id="prev" aria-label="이전 슬라이드">‹</button>
+<button class="navbtn" id="next" aria-label="다음 슬라이드">›</button>
+
+<div id="viewport"><div id="stage">
+  <div id="rail" aria-label="시즌1 진행 단계"></div>
+
+  <!-- 1 -->
+  <section class="slide" data-stage="today" data-time="22:00"
+    data-notes="6회차입니다. 대체공휴일 때문에 오늘만 화요일이에요. 오늘이 시즌1 목표를 찍는 날입니다. 1회차 첫 슬라이드에 적었던 그 한 줄, ssh cirros@Floating IP. 오늘 치는 명령은 크게 세 덩어리예요. init.sh 한 번, 인스턴스 만들고 FIP 붙이는 것, 그리고 ssh. 그리고 마지막 10분은 방금 지나간 라우터가 실제로 어떻게 생겼는지 리눅스 명령으로 까봅니다.">
+    <div class="title-wrap">
+      <div class="title-meta">CloudClub 10기 오픈스택 스터디, 6회차, 10/6(화) 22:00</div>
+      <h1>INIT, 그리고 SSH</h1>
+      <p class="title-sub">1회차부터 적어 둔 시즌1 목표를 오늘 찍습니다.</p>
+      <div class="goal"><span>ssh cirros@&lt;FIP&gt;</span></div>
+      <div class="three"><div>bash init.sh</div><div>server create + FIP</div><div>ip netns exec</div></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-stage="today" data-time="22:02"
+    data-notes="위 띠 보시면 setup, pull, deploy까지 초록색입니다. 지난주 끝에 컨테이너는 다 떴는데 VM은 하나도 못 띄우는 상태라고 했죠. 접속 정보 파일도 없고, 네트워크도 없고, 이미지도 없어서요. 오늘은 그 재료를 init.sh로 만들고, 그 재료로 인스턴스를 띄워서 들어갑니다. README 맨 위에 있던 3층 그림 기억나세요? 가비아 VM, 그 위에 컨테이너 28개, 그 위에 OpenStack이 만든 인스턴스. 오늘 세 번째 층이 생깁니다.">
+    <h2>지난주까지 2층, 오늘 3층을 올린다</h2>
+    <div class="cols3">
+      <div class="wk done"><div class="d">3회차</div><h3>가비아 VM</h3>
+        <p>지급받은 서버에 SSH로 들어갔다. 손님 입장.</p></div>
+      <div class="wk done"><div class="d">4~5회차</div><h3>컨테이너 28개 = OpenStack</h3>
+        <p>setup.sh, pull, deploy. 다 떠 있지만 아직 VM은 못 띄운다.</p></div>
+      <div class="wk now"><div class="d">6회차, 오늘</div><h3>OpenStack이 만든 인스턴스</h3>
+        <p>init.sh로 재료를 만들고, 인스턴스를 띄우고, 그 안으로 SSH.</p></div>
+    </div>
+    <p class="note" style="margin-top:36px">3회차에는 가비아가 만든 VM을 받기만 했습니다. 오늘은 같은 일을 <b>내가 배포한 OpenStack</b>이 하는 걸 직접 봅니다.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-stage="today" data-time="22:04"
+    data-notes="60분 계획입니다. 앞 10분 안에 INIT 체크까지 다 같이 찍는 게 1차 목표. 그다음 인스턴스 만드는 수십 초 동안 3회차 6단계를 다시 꺼내 봅니다. 22시 25분쯤 SSH 들어가는 게 2차 목표고, 그 뒤는 들어간 김에 안에서 이것저것 확인하고, 라우터의 실체를 봅니다. 5분 룰 그대로 갑니다. 혼자 5분 넘게 막히면 메모해두고 일단 따라오세요. 세션 끝나고 제가 SSH로 들어가서 봐드릴게요.">
+    <h2>오늘 60분</h2>
+    <div class="tl">
+      <div class="t">22:00</div><div class="e"><b>도입</b> 지난주 인증 확인, 시작 전 점검 <span>(5분)</span></div>
+      <div class="t hl">22:07</div><div class="e hl"><b>init.sh</b> 실행하고 INIT ✅ 화면 읽기 <span>(약 40초 + 설명)</span></div>
+      <div class="t">22:11</div><div class="e"><b>Horizon</b> Network Topology에서 방금 만든 것 확인</div>
+      <div class="t">22:14</div><div class="e"><b>인스턴스</b> 키페어, server create, 그 수십 초 동안 3회차 6단계 다시 보기</div>
+      <div class="t hl">22:22</div><div class="e hl"><b>FIP, SSH</b> ping, 그리고 ssh cirros@FIP 🏁</div>
+      <div class="t">22:28</div><div class="e"><b>안에서</b> 인터넷, DNS, MTU, 메타데이터 확인</div>
+      <div class="t">22:35</div><div class="e"><b>라우터의 실체</b> ip netns와 iptables로 qrouter 뜯어보기 <span>(10분)</span></div>
+      <div class="t">22:45</div><div class="e"><b>정리</b> 막혔을 때, 인증, 7회차와 VM 삭제 일정</div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-stage="init" data-time="22:05"
+    data-notes="시작 전에 세 가지만 봅니다. 첫째, docker ps 개수. 28개가 떠 있어야 하고 전부 Up이어야 합니다. restarting이 보이면 손 들어주세요. 둘째, git pull. 레포 최신으로 받아두세요. 셋째, 메모리. free 쳐서 available이 3기가 근처면 정상입니다. 지난주 docker ps 인증 안 하신 분은 deploy가 끝났는지부터 확인하고, 안 끝났으면 오늘은 7회차 구제 트랙입니다. 따라오면서 구경만 하셔도 돼요.">
+    <h2>시작 전에 세 가지만</h2>
+    <div class="cols">
+      <div>
+        <ul class="plain">
+          <li><b>컨테이너 28개</b>가 전부 <code>Up</code>인지. <code>Restarting</code>이 보이면 바로 말해주세요.</li>
+          <li><b>레포 최신화.</b> init.sh가 지난주 이후 바뀌었을 수 있습니다.</li>
+          <li><b>메모리 여유.</b> available이 3GB 근처면 정상입니다.</li>
+        </ul>
+        <p class="muted" style="margin-top:18px;font-size:18px">deploy가 아직 안 끝났다면 오늘은 따라오며 구경하고, 7회차 구제 트랙에서 완주합니다.</p>
+      </div>
+<pre class="term"><span class="p">$</span> docker ps -q | wc -l
+<span class="c">28</span>
+
+<span class="p">$</span> cd ~/10th-openstack-study && git pull
+
+<span class="p">$</span> free -h | grep Mem
+<span class="c">Mem:  7.8Gi  4.7Gi ...  3.0Gi  ← available</span></pre>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-stage="init" data-time="22:07"
+    data-notes="첫 번째 명령. 지난주에 미리 뜯어본 init.sh를 이제 진짜 돌립니다. 주의 하나, ./init.sh로 치면 Permission denied가 날 수 있어요. 깃허브에 실행 권한 없이 올라가 있어서 그렇습니다. bash init.sh로 치세요. tee로 로그 남기는 건 막혔을 때 그 파일 보내달라고 하려고요. 40초면 끝납니다. 지난주 복습 겸 오른쪽 네 줄 다시 볼게요. 1단계 deploy 확인하고 post-deploy, 2단계 br-ex에 게이트웨이 IP와 NAT, 3단계 네트워크 라우터 이미지 플레이버 보안그룹, 4단계 INIT 체크. 중간에 빨간 글씨로 실패, 몇 번째 줄에서 중단이 뜨면 그 화면 그대로 캡처해서 톡방에 올려주세요.">
+    <div class="cp">체크포인트 1</div>
+    <h2>init.sh 실행</h2>
+<pre class="term"><span class="p">$</span> source ~/kolla-venv/bin/activate
+<span class="p">$</span> cd ~/10th-openstack-study/scripts
+<span class="p">$</span> <span class="k">bash init.sh 2&gt;&amp;1 | tee ~/init.log</span>      <span class="c"># 약 40초, 재실행 안전</span></pre>
+    <div class="cols" style="margin-top:24px">
+      <div class="beat" style="grid-template-columns:110px 1fr;font-size:18px">
+        <div class="l">[1/4]</div><div>deploy 확인, post-deploy로 <code>admin-openrc.sh</code> 생성</div>
+        <div class="l">[2/4]</div><div><code>br-ex</code>에 <code>.1</code>, MASQUERADE, FORWARD 허용</div>
+        <div class="l">[3/4]</div><div>네트워크, 라우터, 이미지, 플레이버, 보안그룹</div>
+        <div class="l">[4/4]</div><div><code>INIT ✅</code>와 Horizon 접속 정보</div>
+      </div>
+      <div>
+        <p class="note warn"><code>./init.sh</code>는 <code>Permission denied</code>가 날 수 있습니다. 레포에 실행 권한 없이 올라가 있어서 <code>bash init.sh</code>로 칩니다.</p>
+        <p class="note" style="margin-top:14px">빨간 <code>[실패] init.sh:줄번호</code>가 뜨면 그 화면 그대로 캡처해서 톡방에.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-stage="init" data-time="22:09"
+    data-notes="다 같이 INIT 체크 떴나요? 이 화면이 첫 번째 인증입니다. 지금 캡처해두세요. 이 화면에 오늘 필요한 게 다 있습니다. 위에 Horizon 주소랑 admin 비밀번호. 가운데 만들어진 것, 이게 오늘 쓸 재료고요. 아래에 다음 단계가 Horizon 버전, CLI 버전 둘 다 적혀 있어요. 오늘 세션은 CLI로 갑니다. 다들 터미널에 있으니까요. Horizon으로 하고 싶은 분은 화면에 적힌 순서대로 하셔도 결과는 같습니다.">
+    <h2>INIT ✅ 화면에 오늘 필요한 게 다 있다</h2>
+    <div class="cols">
+<pre class="term" style="font-size:15px;line-height:1.55"><span class="k">=====================================================
+  INIT ✅  — 이 화면을 캡처해서 단톡방에 인증해주세요!
+=====================================================</span>
+
+Horizon : http://&lt;공인 IP&gt;/
+  user  : admin
+  pass  : <span class="c">xxxxxxxx</span>
+
+만들어진 것:
+  provider_network (192.168.200.0/24, FIP .101~.150)
+  tenant_network (10.10.10.0/24) ─ tenant_router (.2)
+  image cirros · flavor m1.tiny · default SG에 ICMP/22
+
+다음 단계 (6회차 실습): ...
+CLI로 같은 일: ...
+라우터의 실체: ...</pre>
+      <div>
+        <p style="margin-bottom:14px"><b>지금 캡처하세요.</b> 오늘 인증 1번입니다.</p>
+        <p style="margin-bottom:14px">위는 Horizon 접속 정보, 가운데는 오늘 쓸 재료, 아래는 오늘 칠 명령입니다.</p>
+        <p class="muted">비밀번호를 잊으면<br><code>grep keystone_admin_password /etc/kolla/passwords.yml</code></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-stage="init" data-time="22:11"
+    data-notes="CLI 가기 전에 Horizon 한 번만 열어봅시다. 브라우저에서 공인 IP로 들어가서 admin이랑 아까 비밀번호. 이게 2회차에 본 Horizon이고, 지금 여러분 VM의 horizon 컨테이너가 띄운 페이지입니다. 왼쪽 메뉴 Network, Network Topology. 방금 init.sh가 만든 세 개가 줄로 이어져 보여야 해요. 왼쪽 외부망, 가운데 라우터, 오른쪽 tenant 망. 지난주 그림이 실제로 그려져 있는 겁니다. 확인했으면 탭은 열어두세요. 이따 인스턴스 만들면 여기 하나 더 붙습니다.">
+    <h2>Horizon에서 방금 만든 걸 본다</h2>
+    <div class="cols">
+      <div>
+        <p style="margin-bottom:14px">브라우저에서 <code>http://&lt;공인 IP&gt;/</code>, admin으로 로그인.</p>
+        <p style="margin-bottom:22px"><b>Network → Network Topology</b>에 세 개가 이어져 보이면 init.sh [3/4]가 제대로 된 겁니다.</p>
+        <p class="note tip">탭은 열어 두세요. 인스턴스를 만들면 tenant_network 옆에 하나가 더 붙습니다.</p>
+      </div>
+      <svg class="fig" viewBox="0 0 560 300" role="img" aria-label="provider_network, tenant_router, tenant_network가 이어진 토폴로지">
+        <style>.tb{fill:#fff;stroke:#17212b;stroke-width:2}.tbh{fill:#fff3c4;stroke:#17212b;stroke-width:2}.tt{font:700 16px 'IBM Plex Sans KR',sans-serif;fill:#17212b}.tm{font:500 13px 'JetBrains Mono',monospace;fill:#5a6773}</style>
+        <rect x="20" y="20" width="30" height="260" class="tbh" rx="3"/>
+        <text x="35" y="296" text-anchor="middle" class="tm">provider</text>
+        <rect x="510" y="20" width="30" height="260" class="tb" rx="3"/>
+        <text x="525" y="296" text-anchor="middle" class="tm">tenant</text>
+        <line x1="50" y1="150" x2="210" y2="150" stroke="#17212b" stroke-width="2"/>
+        <line x1="350" y1="150" x2="510" y2="150" stroke="#17212b" stroke-width="2"/>
+        <rect x="210" y="110" width="140" height="80" class="tb" rx="3"/>
+        <text x="280" y="145" text-anchor="middle" class="tt">tenant_router</text>
+        <text x="280" y="170" text-anchor="middle" class="tm">.2 ── .1</text>
+        <text x="130" y="138" text-anchor="middle" class="tm">192.168.200.2</text>
+        <text x="430" y="138" text-anchor="middle" class="tm">10.10.10.1</text>
+        <rect x="400" y="215" width="100" height="44" fill="none" stroke="#cdd5dc" stroke-width="2" stroke-dasharray="6 5" rx="3"/>
+        <text x="450" y="242" text-anchor="middle" class="tm">곧 cirros</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" data-stage="server" data-time="22:14"
+    data-notes="이제 인스턴스. 먼저 admin-openrc.sh를 source합니다. 이게 출입증이라고 했죠. 그다음 키페어. 3회차에 제가 가비아에서 여러분 키페어를 만들어서 개인키를 DM으로 줬잖아요. 오늘은 여러분이 그 역할입니다. OpenStack이 공개키는 갖고 있고 개인키는 이 파일로 한 번만 줍니다. chmod 600 빼먹으면 ssh가 키를 거부하니까 꼭. 그다음 server create. 엔터 치면 바로 표가 나오는데 status가 BUILD예요. 아직 아무것도 안 만들어졌는데 목록에는 보입니다. 3회차 2단계에서 말한 그 간극이에요. 바로 이어서 watch 걸어주세요.">
+    <h2>키페어를 만들고, 인스턴스를 요청한다</h2>
+<pre class="term" style="font-size:17px"><span class="p">$</span> source /etc/kolla/admin-openrc.sh                <span class="c"># 출입증</span>
+<span class="p">$</span> openstack keypair create mykey &gt; ~/mykey.pem
+<span class="p">$</span> chmod 600 ~/mykey.pem                            <span class="c"># 빠뜨리면 ssh가 키를 거부</span>
+
+<span class="p">$</span> <span class="k">openstack server create first-vm \
+    --image cirros --flavor m1.tiny \
+    --network tenant_network --key-name mykey</span>
+<span class="c">| status | BUILD |   ← 목록엔 보이지만 아직 아무것도 없다</span>
+
+<span class="p">$</span> watch -n1 'openstack server show first-vm -f value \
+    -c status -c OS-EXT-STS:task_state'</pre>
+    <p class="note" style="margin-top:18px">3회차에는 리더가 가비아에서 키페어를 만들어 개인키를 DM으로 보냈습니다. 오늘은 여러분이 그 역할입니다.</p>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide" data-stage="server" data-time="22:16"
+    data-notes="watch 화면에서 task_state가 scheduling, networking, spawning, 그리고 None으로 바뀌면서 status가 ACTIVE가 됩니다. 이게 3회차에 이론으로만 본 6단계예요. 이번엔 각 단계를 맡은 컨테이너가 다 여러분 docker ps에 있습니다. 1단계 인증은 keystone. 2단계 접수는 nova_api가 mariadb에 BUILD로 적고. 3단계 scheduler가 placement한테 자리 있냐 묻습니다. 우리는 노드가 하나라 고를 게 없지만 길은 똑같이 지나가요. 4단계 rabbitmq로 nova_compute한테 지시. 5단계가 느린 구간이죠, glance에서 이미지 받고 neutron한테 포트랑 IP 받고. 6단계 nova_libvirt가 QEMU를 띄웁니다. 3회차 질문 하나. No valid host was found는 몇 단계 에러였죠? 3단계, 자리가 없다는 뜻입니다. 인스턴스 세 대 만들면 오늘 실제로 볼 수도 있어요. 그러니까 두 대까지만.">
+    <h2>그 수십 초 동안: 3회차 6단계가 내 VM에서 돈다</h2>
+    <div class="six">
+      <div class="h"></div><div class="h">단계</div><div class="h">맡은 컨테이너 (내 docker ps)</div><div class="h">task_state</div>
+      <div class="n">1</div><div>인증</div><div><code>keystone</code> 토큰 발급</div><div class="st">—</div>
+      <div class="n">2</div><div>접수</div><div><code>nova_api</code>가 <code>mariadb</code>에 BUILD로 기록</div><div class="st">—</div>
+      <div class="n">3</div><div>배치 결정</div><div><code>nova_scheduler</code> → <code>placement_api</code></div><div class="st">scheduling</div>
+      <div class="n">4</div><div>작업 수신</div><div><code>rabbitmq</code> → <code>nova_conductor</code> → <code>nova_compute</code></div><div class="st">—</div>
+      <div class="n slow">5</div><div class="slow">준비물 수집</div><div class="slow"><code>glance_api</code> 이미지, <code>neutron_server</code> 포트와 IP</div><div class="st slow">networking</div>
+      <div class="n slow">6</div><div class="slow">기동</div><div class="slow"><code>nova_libvirt</code>가 QEMU 실행</div><div class="st slow">spawning → ACTIVE</div>
+    </div>
+    <p class="note warn" style="margin-top:20px"><code>No valid host was found</code>는 3단계, 자리가 없다는 뜻입니다. 8GB 호스트에서 인스턴스는 <b>두 대까지만.</b></p>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide" data-stage="fip" data-time="22:22"
+    data-notes="ACTIVE 떴으면 Ctrl+C로 watch 빠져나오고, 지금 인스턴스 주소는 10.10.10 대역입니다. 이 주소는 라우터 안쪽이라 호스트에서 바로 못 가요. 그래서 FIP를 붙입니다. provider_network의 풀에서 하나 받아서 인스턴스에 붙이는 두 줄. 101번부터 150번 중에 하나가 나올 거예요. 그리고 ping. 여기서 ttl 숫자 보세요. 63입니다. cirros가 64로 보내고 중간에 한 홉을 거쳐서 하나 줄었어요. 그 한 홉이 tenant_router입니다. 이따 그 라우터를 직접 까볼 거예요. 중요한 것 하나. 이 FIP는 192.168 사설 대역이라 여러분 노트북에서는 안 닿습니다. 반드시 가비아 VM 셸 안에서 치세요.">
+    <h2>Floating IP를 붙이고 ping</h2>
+    <div class="cols">
+<pre class="term" style="font-size:17px"><span class="p">$</span> <span class="k">FIP=$(openstack floating ip create \
+    provider_network -f value \
+    -c floating_ip_address)</span>
+<span class="p">$</span> echo $FIP
+<span class="c">192.168.200.1xx</span>
+
+<span class="p">$</span> <span class="k">openstack server add floating ip \
+    first-vm $FIP</span>
+
+<span class="p">$</span> ping -c 3 $FIP
+<span class="c">64 bytes from ...: icmp_seq=1 ttl=<span class="k">63</span></span></pre>
+      <div>
+        <p style="margin-bottom:16px">인스턴스 주소 <code>10.10.10.x</code>는 라우터 안쪽이라 호스트에서 바로 닿지 않습니다. 외부망 쪽 주소 하나를 빌려 붙이는 게 FIP입니다.</p>
+        <p style="margin-bottom:16px"><b>ttl=63.</b> cirros가 64로 보냈고, 중간에 한 홉을 지나며 1이 줄었습니다. 그 한 홉이 <code>tenant_router</code>입니다.</p>
+        <p class="note warn">FIP는 사설 대역입니다. 노트북이 아니라 <b>가비아 VM 셸 안에서</b> 칩니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-stage="ssh" data-time="22:25"
+    data-notes="자, 시즌1 목표입니다. 다 같이 칩시다. ssh 마이너스 i mykey.pem cirros 골뱅이 FIP. 처음 접속이라 known hosts 질문 나오면 yes. 3회차 Part B에서 이 질문이 뭔지 봤죠. 프롬프트가 dollar 표시로 바뀌면 성공입니다. 여러분은 지금 여러분이 배포한 클라우드가 만든 서버 안에 있습니다. 이 화면 캡처가 오늘 인증 2번이에요. ping은 되는데 ssh가 Connection refused나 timeout이면 대부분 아직 부팅 중입니다. ACTIVE는 QEMU가 떴다는 뜻이지 OS 부팅이 끝났다는 뜻이 아니에요. 30초 기다렸다 다시 치세요.">
+    <div class="cp">체크포인트 2</div>
+    <div class="title-wrap" style="margin-top:0">
+      <h1 style="font-size:52px">시즌1 목표</h1>
+      <div class="goal" style="font-size:44px;margin:22px 0"><span>ssh -i ~/mykey.pem cirros@$FIP</span></div>
+<pre class="term" style="max-width:760px"><span class="c">Are you sure you want to continue connecting? </span><span class="k">yes</span>
+<span class="p">$</span> <span class="c">← cirros의 프롬프트. 내 OpenStack이 만든 서버 안</span></pre>
+      <p class="title-sub" style="font-size:22px">이 화면 캡처가 오늘 인증 2번입니다.</p>
+      <p class="note tip" style="margin-top:14px;max-width:44em">ping은 되는데 SSH가 거부되면 아직 부팅 중입니다. ACTIVE는 QEMU가 떴다는 뜻이지 OS가 다 켜졌다는 뜻이 아닙니다. 30초 뒤 다시.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide" data-stage="inside" data-time="22:28"
+    data-notes="들어간 김에 네 개만 확인합니다. 첫째 ping 8.8.8.8. 이게 지난주 그림의 경로 A, 인스턴스에서 인터넷 나가는 길이에요. 되면 init.sh 2단계 MASQUERADE가 일하고 있는 겁니다. 둘째 google.com. 이게 되면 DNS가 들어간 거고, SU Cloud 함정 9번을 피한 겁니다. 셋째 MTU. 1450이 나옵니다. 보통 1500인데 50바이트가 빠졌어요. tenant 망이 VXLAN이라 패킷마다 50바이트 포장지를 씌우기 때문입니다. 넷째가 제일 재밌어요. 169.254.169.254. 3회차 Part B에서 cloud-init이 공개키를 여기서 받아 간다고 했죠. 직접 물어보면 0=mykey가 나옵니다. 아까 여러분이 만든 그 키페어 이름이에요. 방금 SSH가 된 이유가 이 한 줄입니다.">
+    <h2>안에 들어온 김에 네 가지</h2>
+    <table>
+      <thead><tr><th style="width:38%">인스턴스 안에서</th><th style="width:22%">기대값</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><code>ping -c 3 8.8.8.8</code></td><td>응답 옴</td><td>경로 A가 뚫렸다. 라우터 SNAT, br-ex, MASQUERADE를 지나 인터넷으로</td></tr>
+        <tr><td><code>ping -c 3 google.com</code></td><td>응답 옴</td><td>서브넷에 DNS가 들어갔다 (SU Cloud 함정 9)</td></tr>
+        <tr><td><code>ip a | grep mtu</code></td><td><code>eth0 ... mtu 1450</code></td><td>1500에서 50 빠짐. VXLAN이 패킷마다 씌우는 포장지 크기</td></tr>
+        <tr class="extra"><td><code>curl -s http://169.254.169.254/latest/meta-data/public-keys/</code></td><td><code>0=mykey</code></td><td>3회차 Part B의 답. cloud-init이 여기서 공개키를 받아 갔기 때문에 방금 SSH가 됐다</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:16px;font-size:17px">다 봤으면 <code>exit</code>로 호스트 셸로 돌아옵니다.</p>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide" data-stage="inside" data-time="22:32"
+    data-notes="지난주에 미리 본 그림 그대로입니다. 차이는 이제 두 길 다 여러분이 직접 지나가 봤다는 거예요. 노란 선 경로 A는 방금 인스턴스 안에서 ping 8.8.8.8 친 길. 주소를 라우터에서 한 번, eth0에서 한 번, 두 번 바꿔서 나갑니다. 점선 경로 B는 호스트에서 ssh cirros FIP 친 길. 호스트는 br-ex에 .1이 있으니까 같은 대역인 FIP로 바로 가고, 라우터가 FIP를 10.10.10 주소로 바꿔서 넘겨줍니다. 그럼 이 라우터라는 건 대체 어디 있는 걸까요? 장비가 있는 것도 아니고, docker ps에 router라는 컨테이너도 없죠. 그걸 지금부터 봅니다.">
+    <h2>방금 지나간 두 길</h2>
+    <svg class="fig" viewBox="0 0 1168 396" role="img" aria-label="인스턴스에서 인터넷까지, 호스트에서 FIP까지의 경로">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#17212b"/></marker>
+        <marker id="ahy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c99600"/></marker>
+      </defs>
+      <style>
+        .bx{fill:#fff;stroke:#17212b;stroke-width:2}
+        .bxh{fill:#fff3c4;stroke:#17212b;stroke-width:2}
+        .t1{font:700 18px 'IBM Plex Sans KR',sans-serif;fill:#17212b}
+        .t2{font:500 15px 'JetBrains Mono',monospace;fill:#17212b}
+        .t3{font:400 14px 'IBM Plex Sans KR',sans-serif;fill:#5a6773}
+        .ln{stroke:#17212b;stroke-width:2}
+      </style>
+      <rect x="178" y="40" width="986" height="350" fill="none" stroke="#cdd5dc" stroke-width="2" stroke-dasharray="6 5" rx="4"/>
+      <text x="196" y="64" class="t3">가비아 VM (호스트)</text>
+      <rect x="10" y="150" width="140" height="90" class="bx" rx="3"/>
+      <text x="80" y="190" text-anchor="middle" class="t1">인터넷</text>
+      <text x="80" y="214" text-anchor="middle" class="t3">가비아 NAT 너머</text>
+      <rect x="210" y="140" width="190" height="110" class="bx" rx="3"/>
+      <text x="305" y="175" text-anchor="middle" class="t1">eth0</text>
+      <text x="305" y="200" text-anchor="middle" class="t2">MASQUERADE</text>
+      <text x="305" y="224" text-anchor="middle" class="t3">eth0 주소로 바꿔 내보냄</text>
+      <rect x="440" y="140" width="190" height="110" class="bx" rx="3"/>
+      <text x="535" y="175" text-anchor="middle" class="t1">br-ex</text>
+      <text x="535" y="200" text-anchor="middle" class="t2">192.168.200.1</text>
+      <text x="535" y="224" text-anchor="middle" class="t3">init.sh가 붙인 게이트웨이</text>
+      <rect x="690" y="140" width="220" height="110" class="bxh" rx="3"/>
+      <text x="800" y="172" text-anchor="middle" class="t1">tenant_router</text>
+      <text x="800" y="197" text-anchor="middle" class="t2">외부 .2 / 내부 .1</text>
+      <text x="800" y="221" text-anchor="middle" class="t3">이건 어디에 있나?</text>
+      <rect x="990" y="140" width="168" height="110" class="bx" rx="3"/>
+      <text x="1074" y="172" text-anchor="middle" class="t1">first-vm</text>
+      <text x="1074" y="197" text-anchor="middle" class="t2">10.10.10.x</text>
+      <text x="1074" y="221" text-anchor="middle" class="t3">FIP .1xx</text>
+      <line x1="150" y1="195" x2="210" y2="195" class="ln"/>
+      <line x1="400" y1="195" x2="440" y2="195" class="ln"/>
+      <line x1="630" y1="195" x2="690" y2="195" class="ln"/>
+      <line x1="910" y1="195" x2="990" y2="195" class="ln"/>
+      <path d="M1074,140 L1074,105 L80,105 L80,150" fill="none" stroke="#c99600" stroke-width="4" marker-end="url(#ahy)"/>
+      <text x="600" y="94" text-anchor="middle" class="t1" style="font-size:16px;fill:#8a6800">경로 A: 인스턴스 안에서 ping 8.8.8.8 (라우터에서 한 번, eth0에서 한 번 주소를 바꿈)</text>
+      <path d="M535,250 L535,330 L1074,330 L1074,250" fill="none" stroke="#17212b" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#ah)"/>
+      <text x="805" y="370" text-anchor="middle" class="t1" style="font-size:16px">경로 B: 호스트에서 ssh cirros@FIP (MASQUERADE 안 거침)</text>
+    </svg>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide" data-stage="netns" data-time="22:35"
+    data-notes="docker ps를 아무리 봐도 router라는 컨테이너는 없습니다. 라우터는 리눅스 네트워크 네임스페이스예요. 호스트 안에 네트워크만 따로 떼어낸 작은 방이라고 보시면 됩니다. ip netns list 치면 qrouter 하나, qdhcp 하나가 보여요. qrouter가 tenant_router, qdhcp가 tenant 망의 DHCP 서버입니다. 그 방 안에 들어가서 ip a를 치면 인터페이스가 두 개 보입니다. qr로 시작하는 게 안쪽 다리, 10.10.10.1. qg로 시작하는 게 바깥 다리, 192.168.200.2. 그런데 qg에 주소가 하나 더 붙어 있죠? 슬래시 32로. 그게 아까 받은 FIP입니다. FIP는 인스턴스한테 붙는 게 아니라 라우터 바깥 다리에 붙어 있어요. 인스턴스 안에서 ip a 쳤을 때 FIP가 안 보였던 이유가 이겁니다.">
+    <h2>라우터는 장비가 아니라 네임스페이스다</h2>
+    <div class="cols">
+<pre class="term" style="font-size:16px"><span class="p">$</span> sudo ip netns list
+<span class="c">qrouter-8c1f...   ← tenant_router
+qdhcp-3a9e...     ← tenant_network의 DHCP</span>
+
+<span class="p">$</span> QR=$(sudo ip netns list | grep -o 'qrouter-[^ ]*')
+<span class="p">$</span> <span class="k">sudo ip netns exec $QR ip -4 a</span>
+<span class="c">qr-xxxx  inet 10.10.10.1/24        ← 안쪽 다리
+qg-xxxx  inet 192.168.200.2/24     ← 바깥 다리
+         inet </span><span class="k">192.168.200.1xx/32</span><span class="c">   ← FIP</span></pre>
+      <div>
+        <p style="margin-bottom:16px"><b>네임스페이스</b>는 호스트 안에 네트워크만 따로 떼어 낸 방입니다. 인터페이스, 라우팅 표, iptables를 각자 따로 갖습니다.</p>
+        <p style="margin-bottom:16px"><b>FIP는 라우터 바깥 다리에 붙어 있습니다.</b> 인스턴스 안에서 <code>ip a</code>를 쳤을 때 FIP가 안 보였던 이유입니다.</p>
+        <p class="muted" style="font-size:18px">OVS 방식을 고른 이유가 이 장면입니다. OVN은 L3를 플로우로 처리해서 qrouter 방 자체가 생기지 않습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide" data-stage="netns" data-time="22:40"
+    data-notes="마지막으로 그 방의 iptables NAT 표를 봅니다. 실제 출력은 길어서 핵심 세 줄만 뽑았어요. 첫 줄, PREROUTING의 DNAT. 목적지가 FIP면 10.10.10 주소로 바꿔라. 이게 경로 B, 여러분 ssh가 들어간 길입니다. 둘째 줄, float-snat. 그 인스턴스가 나갈 땐 출발지를 FIP로 바꿔라. 셋째 줄, FIP 없는 인스턴스가 나갈 땐 출발지를 .2로 바꿔라. 경로 A에서 라우터가 주소를 한 번 바꾼다고 한 게 이 줄입니다. 정리하면 Floating IP라는 거창한 이름의 실체는 네임스페이스 하나에 들어 있는 iptables 규칙 두 줄입니다. AWS의 Elastic IP도 구현은 다르지만 하는 일은 같아요. 오늘 이걸 직접 봤다는 게 시즌1의 진짜 수확입니다.">
+    <h2>Floating IP의 실체는 iptables 규칙 두 줄</h2>
+<pre class="term" style="font-size:16px"><span class="p">$</span> <span class="k">sudo ip netns exec $QR iptables -t nat -L -n</span>   <span class="c"># 핵심만 발췌</span>
+
+<span class="c">Chain neutron-l3-agent-PREROUTING</span>
+DNAT  all -- 0.0.0.0/0      <span class="k">192.168.200.1xx</span>   to:<span class="k">10.10.10.x</span>       <span class="c">← 들어올 때: FIP → 인스턴스</span>
+<span class="c">Chain neutron-l3-agent-float-snat</span>
+SNAT  all -- <span class="k">10.10.10.x</span>     0.0.0.0/0         to:<span class="k">192.168.200.1xx</span>  <span class="c">← 나갈 때: 인스턴스 → FIP</span>
+<span class="c">Chain neutron-l3-agent-snat</span>
+SNAT  all -- 0.0.0.0/0      0.0.0.0/0         to:192.168.200.2    <span class="c">← FIP 없는 인스턴스는 .2로</span></pre>
+    <div class="cols" style="margin-top:24px">
+      <p class="note tip">DNAT 줄이 경로 B, 여러분의 SSH가 들어간 길입니다. 맨 아래 SNAT 줄이 경로 A에서 라우터가 주소를 바꾼 그 한 번입니다.</p>
+      <p class="note">Floating IP라는 이름의 실체는 네임스페이스 하나 안의 NAT 규칙입니다. AWS Elastic IP도 구현은 달라도 하는 일은 같습니다.</p>
+    </div>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide" data-stage="wrap" data-time="22:45"
+    data-notes="막혔을 때 표입니다. 오늘 제일 많이 나올 건 두 개일 거예요. ACTIVE인데 SSH 안 되는 것, 대부분 부팅 대기입니다. console log 보면 login 프롬프트가 떴는지 알 수 있어요. 그리고 ping 자체가 안 되면 br-ex-gw 서비스 상태부터. 재부팅하고 오면 인스턴스가 Shutoff로 돼 있는데, 이건 고장이 아니라 Nova 기본 동작입니다. server start 하면 되고, 네트워크 배관은 init.sh가 systemd로 걸어놔서 알아서 복구돼요.">
+    <h2>막혔을 때</h2>
+    <table>
+      <thead><tr><th style="width:30%">증상</th><th>할 일</th></tr></thead>
+      <tbody>
+        <tr><td><code>[실패] init.sh:줄번호</code></td><td>화면 캡처와 <code>~/init.log</code>를 톡방에. 원인 해결 후 그대로 재실행 (멱등).</td></tr>
+        <tr><td>status <code>ERROR</code></td><td><code>openstack server show first-vm -c fault</code>. <code>No valid host</code>면 메모리 부족, 인스턴스 정리.</td></tr>
+        <tr><td>ACTIVE인데 SSH 거부</td><td>부팅 대기. <code>openstack console log show first-vm | tail</code>에 login 프롬프트가 떴는지 확인.</td></tr>
+        <tr><td>FIP로 ping 자체가 안 됨</td><td><code>systemctl status br-ex-gw</code>, <code>ip a show br-ex</code>에 <code>.1</code>이 있는지.</td></tr>
+        <tr><td>SSH가 키를 거부</td><td><code>chmod 600 ~/mykey.pem</code>, 사용자명은 <code>cirros</code>.</td></tr>
+        <tr><td>VM 재부팅 후 Shutoff</td><td>정상 동작. <code>openstack server start first-vm</code>. 네트워크는 자동 복구.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 17 -->
+  <section class="slide" data-stage="wrap" data-time="22:48"
+    data-notes="인증은 두 장. INIT 체크 화면, 그리고 cirros 안에 들어간 화면. 7회차 전까지 톡방에 올려주세요. 7회차는 10월 12일 월요일, 원래대로 월요일입니다. 오늘 못 끝낸 분 구제가 우선이고, 끝낸 분은 심화로 오늘 만든 first-vm의 request id를 잡아서 6단계를 로그로 따라가 봅니다. 오늘 6단계 표에 컨테이너 이름 적었던 게 그 지도예요. 그리고 중요한 공지. 10월 13일 화요일에 VM 전원 삭제합니다. 하루 늦으면 2만 7천 원이 나가요. 남기고 싶은 설정 파일이나 로그, 스크린샷은 그 전에 챙겨두세요.">
+    <h2>인증하고, 다음 주</h2>
+    <div class="cols3">
+      <div class="wk now"><div class="d">7회차 전까지</div><h3>인증 두 장</h3>
+        <p>① <code>INIT ✅</code> 화면<br>② cirros 프롬프트가 보이는 SSH 화면</p></div>
+      <div class="wk"><div class="d">7회차, 10/12(월)</div><h3>구제와 심화</h3>
+        <p>못 끝낸 분 완주가 우선. 끝낸 분은 <code>first-vm</code>의 request-id로 6단계를 로그에서 따라갑니다.</p></div>
+      <div class="wk"><div class="d">10/13(화)</div><h3>VM 전원 삭제</h3>
+        <p>남길 설정, 로그, 스크린샷은 그 전에. 하루 늦으면 약 2.7만 원.</p></div>
+    </div>
+    <p class="note" style="margin-top:34px">오늘 6단계 표에 적은 컨테이너 이름이 7회차 로그 추적의 지도입니다. <code>sudo ls /var/log/kolla/</code>를 한 번 열어 두세요.</p>
+  </section>
+
+  <!-- 18 -->
+  <section class="slide" data-stage="wrap" data-time="22:50"
+    data-notes="정리하겠습니다. 3회차에 여러분은 가비아가 만든 VM을 손님으로 받았어요. 오늘은 같은 일을 여러분이 배포한 OpenStack이 했고, 그 과정을 컨테이너 이름으로, 상태 전이로, 네임스페이스와 iptables 규칙으로 직접 봤습니다. 퍼블릭 클라우드 뒤에 뭐가 있을까라는 첫 질문의 답이 지금 여러분 VM 안에 있어요. 수고하셨습니다. 질문 받을게요.">
+    <div class="title-wrap">
+      <div class="title-meta">시즌1 목표, 달성</div>
+      <h1 style="font-size:52px">3회차엔 손님이었고,<br>오늘은 그 뒤를 직접 봤다</h1>
+      <p class="title-sub">버튼 뒤의 6단계는 컨테이너 이름이 되었고, Floating IP는 네임스페이스 안의 NAT 규칙이 되었습니다.</p>
+      <p class="note" style="margin-top:34px;max-width:34em">퍼블릭 클라우드 뒤에는 뭐가 있을까. 그 답이 지금 여러분 VM 안에 있습니다.</p>
+    </div>
+  </section>
+
+  <div id="foot"><span>CloudClub 10기 오픈스택 스터디 6회차</span><span><span id="clock"></span>&nbsp;&nbsp;&nbsp;<span id="count"></span></span></div>
+</div></div>
+
+<div id="notes" aria-live="polite"><h4>대본</h4><div id="notesText"></div></div>
+
+<script>
+(function(){
+  const STAGES=[
+    {id:"setup",label:"setup.sh",wk:"4회차"},
+    {id:"pull",label:"pull",wk:"5회차"},
+    {id:"deploy",label:"deploy",wk:""},
+    {id:"init",label:"init.sh",wk:"오늘"},
+    {id:"server",label:"server create",wk:""},
+    {id:"fip",label:"floating ip",wk:""},
+    {id:"ssh",label:"ssh cirros",wk:"🏁"}
+  ];
+  const DONE_BEFORE=3;
+  const rail=document.getElementById('rail');
+  STAGES.forEach(s=>{
+    const d=document.createElement('div');d.className='box';d.dataset.id=s.id;
+    d.innerHTML=(s.wk?'<small>'+s.wk+'</small>':'')+s.label;rail.appendChild(d);
+  });
+  const boxes=[...rail.children];
+  const slides=[...document.querySelectorAll('.slide')];
+  const clock=document.getElementById('clock'),count=document.getElementById('count');
+  const notes=document.getElementById('notes'),notesText=document.getElementById('notesText');
+  let i=0;
+
+  function paintRail(stage){
+    const cur=STAGES.findIndex(s=>s.id===stage);
+    boxes.forEach((b,k)=>{
+      b.className='box';
+      if(k<DONE_BEFORE){b.classList.add('done');return;}
+      if(stage==='today'){b.classList.add('today');return;}
+      if(cur<0){b.classList.add('done');return;}           // inside, netns, wrap: 전부 완료
+      if(k<cur)b.classList.add('done');
+      else if(k===cur)b.classList.add('now');
+      else b.classList.add('later');
+    });
+  }
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('on',k===i));
+    const s=slides[i];
+    paintRail(s.dataset.stage);
+    clock.textContent=s.dataset.time||'';
+    count.textContent=(i+1)+' / '+slides.length;
+    notesText.textContent=s.dataset.notes||'';
+    history.replaceState(null,'','#'+(i+1));
+  }
+  function fit(){
+    const sc=Math.min(window.innerWidth/1280,window.innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+sc+')';
+  }
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(i+1)}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(i-1)}
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+    else if(e.key==='n'||e.key==='N')notes.classList.toggle('show');
+    else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}
+  });
+  document.getElementById('prev').onclick=()=>show(i-1);
+  document.getElementById('next').onclick=()=>show(i+1);
+  window.addEventListener('resize',fit);
+  fit();
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>

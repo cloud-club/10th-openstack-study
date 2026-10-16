@@ -2,10 +2,6 @@
 # =============================================================================
 # setup.sh — CloudClub 10기 시즌1 오픈스택 스터디 (4회차: READY 확인용)
 #
-# 근거: SU-Cloud 프로젝트에서 검증한 Kolla-Ansible AIO 절차
-#   - 운영계(.179) 구축 기록 2026-08-13  (Ubuntu 24.04 / kolla-ansible 22.0.0 / 2026.1)
-#   - 개발계(.180) ML2/OVS 구성 2026-07-07
-#   - 공부 노트 Ch4 (가비아 VM · ML2/OVS 이식본)
 # 가비아 VM에 맞게 바꾼 것: 브리지(brbond0)·MAC 고정 불필요 → 단일 NIC 그대로 사용,
 #   VIP = VM 사설 IP, 중첩 가상화 자동 감지(kvm/qemu 분기), 스왑 보강,
 #   kvm_intel 로드용 systemd 유닛(가비아 이미지가 /etc/modprobe.d/kvm.conf 로 블랙리스트 처리하므로 modules-load.d 불가).
@@ -282,7 +278,7 @@ sg docker -c ". '$VENV/bin/activate' && kolla-ansible prechecks -i '$INVENTORY' 
 cat <<EOF
 
 $(echo -e "\033[1;32m")=====================================================
-  READY ✅  — 이 화면을 캡처해서 단톡방에 인증해주세요!
+  READY ✅
 =====================================================$(echo -e "\033[0m")
 
 다음 단계 (5회차 deploy 데이, 세션에서 다같이):
